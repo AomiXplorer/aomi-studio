@@ -161,7 +161,10 @@ Tested on 2026-11-14 against the live provider and a local production build:
   provider's 403 plan message. Both surfaced word for word in the UI.
 - Client storage mode end to end in headless Chrome: project created through the UI,
   agent wrote `catatan.txt`, workspace reloaded from browser storage and shown in the
-  file tree, conversation intact.
+  file tree, conversation intact. Repeated against the live Vercel deployment.
+- ZIP download through the workspace button with browser-held files
+  (`scripts/zip-check.mjs`): archive held both files plus `AOMI-PROJECT.md`.
+- Static check flags an unclosed brace in a JS file and stays quiet on valid code.
 - Headless Chrome check: no horizontal overflow on any page at 1440x900 or 390x844,
   background `#09090b`.
 

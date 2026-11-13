@@ -74,6 +74,13 @@ export async function analyzeProject(projectId: string): Promise<ProjectAnalysis
       if (/TODO|FIXME/.test(line)) todos.push({ file: entry.path, line: index + 1, text: line.trim().slice(0, 160) });
     });
     if (entry.size === 0) checks.push({ level: "warning", message: "File kosong.", file: entry.path });
+    // Bracket balance catches the most common hand-written syntax break early.
+    if (/\.(tsx?|jsx?|mjs|cjs|css|scss|less|html?|vue|svelte)$/i.test(entry.path)) {
+      const balance = bracketBalance(content);
+      if (!balance.balanced) {
+        checks.push({ level: "error", message: balance.message || "Kurung tidak seimbang.", file: entry.path });
+      }
+    }
   }
 
   let dependencies: string[] = [];
