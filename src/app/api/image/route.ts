@@ -6,7 +6,9 @@ import { clientKey, rateLimit } from "@/lib/services/rate-limit";
 import { errorResponse, json, parseBody, serverError } from "@/lib/api";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+// Vercel rejects values above 60 for this plan tier (verified by deploy), so the
+// streaming route gets the maximum the platform allows.
+export const maxDuration = 60;
 
 const schema = z.object({
   prompt: z.string().min(3).max(4000),
