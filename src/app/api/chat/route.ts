@@ -10,8 +10,10 @@ import {
   touchProject,
   type StoredMessage,
 } from "@/lib/workspace/service";
+import { runWithStore } from "@/lib/workspace/store";
+import { prepareSession, snapshotSession, type Session } from "@/lib/workspace/session";
 import { clientKey, rateLimit } from "@/lib/services/rate-limit";
-import { errorResponse, parseBody } from "@/lib/api";
+import { errorResponse, parseBody, serverError } from "@/lib/api";
 
 export const runtime = "nodejs";
 // Vercel rejects values above 60 for this plan tier (verified by deploy), so the
@@ -25,6 +27,28 @@ const schema = z.object({
   model: z.string().min(1).max(120).optional(),
   temperature: z.number().min(0).max(1.5).optional(),
   attachments: z.array(z.object({ name: z.string().max(160), path: z.string().max(300) })).max(6).optional(),
+  /** Present in client storage mode: the browser owns the workspace. */
+  workspace: z
+    .object({
+      project: z.object({
+        id: z.string().min(6).max(64),
+        name: z.string().max(120).optional(),
+        description: z.string().max(600).optional(),
+        stack: z.string().max(40).optional(),
+        model: z.string().max(120).optional(),
+      }),
+      files: z
+        .array(
+          z.object({
+            path: z.string().min(1).max(300),
+            content: z.string(),
+            encoding: z.enum(["utf8", "base64"]).optional(),
+          }),
+        )
+        .max(300),
+      messages: z.array(z.record(z.string(), z.unknown())).max(80).optional(),
+    })
+    .optional(),
 });
 
 function toHistory(messages: StoredMessage[]): ChatMessage[] {
@@ -47,9 +71,26 @@ export async function POST(request: Request) {
 
   const parsed = await parseBody(request, schema);
   if (parsed.error) return parsed.error;
-  const { projectId, message, model, temperature, attachments } = parsed.data;
+  const { projectId, message, model, temperature, attachments, workspace } = parsed.data;
 
-  const project = await getProject(projectId);
+  let session: Session | null = null;
+  if (workspace) {
+    try {
+      session = await prepareSession({
+        project: workspace.project,
+        files: workspace.files,
+        messages: workspace.messages as unknown as StoredMessage[] | undefined,
+      });
+    } catch (error) {
+      return serverError(error);
+    }
+  }
+
+  /** Runs work inside the request-scoped store when the client owns the workspace. */
+  const inScope = <T,>(fn: () => Promise<T>): Promise<T> =>
+    session ? (runWithStore(session.store, fn) as Promise<T>) : fn();
+
+  const project = await inScope(() => getProject(projectId));
   if (!project) return errorResponse("Project tidak ditemukan.", 404);
 
   const attachmentNote = attachments?.length
@@ -63,24 +104,21 @@ export async function POST(request: Request) {
     createdAt: new Date().toISOString(),
     attachments: attachments?.map((file) => ({ name: file.name, path: file.path })),
   };
-  await appendMessage(projectId, userMessage);
-  await touchProject(projectId, { model: model || project.model });
+  await inScope(() => appendMessage(projectId, userMessage));
+  await inScope(() => touchProject(projectId, { model: model || project.model }));
 
-  const history = toHistory(await getMessages(projectId));
+  const history = toHistory(await inScope(() => getMessages(projectId)));
   history.pop(); // the message we just stored is passed separately
 
   const abort = new AbortController();
-  request.signal.addEventListener("abort", () => {
-    console.log("[aomi] request signal aborted:", String(request.signal.reason));
-    abort.abort();
-  });
+  request.signal.addEventListener("abort", () => abort.abort());
 
   const encoder = new TextEncoder();
   let closed = false;
 
   const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const send = (event: AgentEvent | { type: "user_saved"; message: StoredMessage }) => {
+    start(controller) {
+      const send = (event: AgentEvent | { type: string; [key: string]: unknown }) => {
         if (closed) return;
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
@@ -89,53 +127,67 @@ export async function POST(request: Request) {
         }
       };
 
-      send({ type: "user_saved", message: userMessage });
-
-      try {
-        const result = await runAgent({
-          projectId,
-          model: model || project.model || aiConfig.defaultModel,
-          history,
-          userMessage: message + attachmentNote,
-          temperature,
-          signal: abort.signal,
-          emit: send,
-        });
-
-        const assistant: StoredMessage = {
-          id: newId(),
-          role: "assistant",
-          content: result.content || (result.toolCalls.length ? "" : "Tidak ada respons dari model."),
-          createdAt: new Date().toISOString(),
-          model: result.model,
-          usage: result.usage,
-          toolCalls: result.toolCalls,
-          status: result.status === "completed" ? "completed" : "failed",
-        };
-        await appendMessage(projectId, assistant);
-        send({ type: "assistant_saved", message: assistant } as unknown as AgentEvent);
-      } catch (error) {
-        const failure: StoredMessage = {
-          id: newId(),
-          role: "assistant",
-          content: `Gagal menjalankan agent: ${(error as Error).message}`,
-          createdAt: new Date().toISOString(),
-          status: "failed",
-        };
-        await appendMessage(projectId, failure).catch(() => undefined);
-        send({ type: "error", message: (error as Error).message, code: (error as { code?: string }).code });
-        send({ type: "done", status: "failed" });
-      } finally {
-        if (!closed) {
-          try {
-            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-            controller.close();
-          } catch {
-            /* stream already gone */
-          }
-          closed = true;
+      const close = () => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        } catch {
+          /* stream already gone */
         }
-      }
+        closed = true;
+      };
+
+      void inScope(async () => {
+        send({ type: "user_saved", message: userMessage });
+
+        try {
+          const result = await runAgent({
+            projectId,
+            model: model || project.model || aiConfig.defaultModel,
+            history,
+            userMessage: message + attachmentNote,
+            temperature,
+            signal: abort.signal,
+            emit: send as (event: AgentEvent) => void,
+          });
+
+          const assistant: StoredMessage = {
+            id: newId(),
+            role: "assistant",
+            content: result.content || (result.toolCalls.length ? "" : "Tidak ada respons dari model."),
+            createdAt: new Date().toISOString(),
+            model: result.model,
+            usage: result.usage,
+            toolCalls: result.toolCalls,
+            status: result.status === "completed" ? "completed" : "failed",
+          };
+          await appendMessage(projectId, assistant);
+          send({ type: "assistant_saved", message: assistant });
+        } catch (error) {
+          const failure: StoredMessage = {
+            id: newId(),
+            role: "assistant",
+            content: `Gagal menjalankan agent: ${(error as Error).message}`,
+            createdAt: new Date().toISOString(),
+            status: "failed",
+          };
+          await appendMessage(projectId, failure).catch(() => undefined);
+          send({ type: "error", message: (error as Error).message, code: (error as { code?: string }).code });
+          send({ type: "done", status: "failed" });
+        } finally {
+          if (session) {
+            // Hand the finished workspace back to the browser that owns it.
+            try {
+              const snapshot = await snapshotSession(session.store, projectId);
+              send({ type: "workspace_snapshot", ...snapshot });
+            } catch (error) {
+              send({ type: "snapshot_failed", message: (error as Error).message });
+            }
+          }
+          close();
+        }
+      });
     },
     cancel() {
       closed = true;

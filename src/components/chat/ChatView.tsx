@@ -21,6 +21,7 @@ import { ToolTimeline, type ToolEntry } from "./ToolTimeline";
 import { StatusRail } from "./StatusRail";
 import { Composer, type PendingAttachment } from "./Composer";
 import { api, streamChat } from "@/lib/client/api";
+import { downloadProjectZip } from "@/lib/client/download";
 import type { AgentEvent, AgentStatus } from "@/lib/agent/engine";
 import type { ProjectMeta, StoredMessage } from "@/lib/workspace/service";
 import type { FileChange } from "@/lib/agent/tools/types";
@@ -312,12 +313,15 @@ export function ChatView() {
               >
                 <FolderOpen className="size-3.5" /> Workspace
               </Link>
-              <a
-                href={`/api/projects/${activeProject.id}/export`}
+              <button
+                type="button"
+                onClick={() => {
+                  downloadProjectZip(activeProject.id, activeProject.name).catch((error: Error) => setError(error.message));
+                }}
                 className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12.5px] text-muted transition-colors hover:bg-surface hover:text-ink"
               >
                 <Download className="size-3.5" /> ZIP
-              </a>
+              </button>
             </>
           ) : null}
           <Select

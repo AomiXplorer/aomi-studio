@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { FsBlobStore } from "./fs-driver";
 import { S3BlobStore } from "./s3-driver";
 
@@ -13,7 +14,19 @@ export interface BlobStore {
 
 let cached: BlobStore | null = null;
 
+/**
+ * Request-scoped store. Client storage mode seeds an in-memory store per request
+ * so no shared disk is required; without a scope the process-wide store is used.
+ */
+const scope = new AsyncLocalStorage<BlobStore>();
+
+export function runWithStore<T>(store: BlobStore, fn: () => T | Promise<T>): T | Promise<T> {
+  return scope.run(store, fn);
+}
+
 export function getStore(): BlobStore {
+  const active = scope.getStore();
+  if (active) return active;
   if (cached) return cached;
   const driver = (process.env.AOMI_STORAGE || "fs").toLowerCase();
   if (driver === "s3") {

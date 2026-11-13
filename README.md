@@ -50,6 +50,7 @@ node scripts/ui-check.mjs <projectId>
 | `BANGUNWEB_AUDIO_MODEL` | no | Default speech model, e.g. `kokoro` |
 | `BANGUNWEB_AUDIO_VOICE` | no | Default voice id |
 | `AOMI_STORAGE` | no | `fs` (default) or `s3` |
+| `NEXT_PUBLIC_AOMI_CLIENT_STORAGE` | no | `1` keeps the workspace in the browser (required on serverless hosts without shared disk) |
 | `AOMI_WORKSPACE_DIR` | no | Base directory for the `fs` driver |
 | `S3_ENDPOINT` / `S3_REGION` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_PREFIX` | for `s3` | Object storage for persistent workspaces |
 | `AOMI_MAX_STEPS` | no | Max agent steps per turn (default 14) |
@@ -124,15 +125,22 @@ goes through the same path guard.
 
 ## Deploying to Vercel
 
-`npm run build` passes on Next.js 16 with Turbopack. Two things matter on Vercel:
+`npm run build` passes on Next.js 16 with Turbopack, and the app has been deployed and
+exercised on Vercel. Three things matter there:
 
-1. **Storage.** The default `fs` driver writes to the instance filesystem, which is
-   ephemeral on Vercel. Set `AOMI_STORAGE=s3` with an S3-compatible bucket
-   (Cloudflare R2, Backblaze B2, MinIO, AWS) for workspaces that survive redeploys.
-   The settings page reports the active driver and whether it persists.
-2. **Time.** Chat runs stream through a route handler with `maxDuration = 300`. Hobby
-   plans cap function duration lower; long agent runs should be given the duration your
-   plan allows, or run on a Node host without that ceiling.
+1. **Storage.** Vercel functions get a fresh `/tmp` per instance, so a server-side
+   workspace disappears between requests. Pick one:
+   - `NEXT_PUBLIC_AOMI_CLIENT_STORAGE=1` (recommended, no extra service): the browser
+     keeps projects, files and messages in localStorage and sends the workspace with
+     each request; the server rebuilds it in memory for that request, so tools, checks
+     and export keep working. Verified with `scripts/client-mode-check.mjs`.
+   - `AOMI_STORAGE=s3` with an S3-compatible bucket (R2, B2, MinIO, AWS) when you want
+     the server to own the files.
+   The settings page reports which driver is active and whether it persists.
+2. **Duration.** Route handlers use `maxDuration = 60`, the maximum this plan tier
+   accepts. A longer agent run needs a host without that ceiling.
+3. **Secrets.** `BANGUNWEB_API_KEY` belongs in the Vercel project's environment
+   variables, never in the repository.
 
 Also required: `BANGUNWEB_API_KEY`, `BANGUNWEB_BASE_URL`, `BANGUNWEB_MODEL` in the
 project's environment variables. Nothing else is needed for the app to boot.
@@ -151,6 +159,9 @@ Tested on 2026-11-14 against the live provider and a local production build:
 - Rate limiting returned 429 after the configured budget.
 - Image generation returned the provider's 402 quota message; speech returned the
   provider's 403 plan message. Both surfaced word for word in the UI.
+- Client storage mode end to end in headless Chrome: project created through the UI,
+  agent wrote `catatan.txt`, workspace reloaded from browser storage and shown in the
+  file tree, conversation intact.
 - Headless Chrome check: no horizontal overflow on any page at 1440x900 or 390x844,
   background `#09090b`.
 

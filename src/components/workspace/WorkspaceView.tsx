@@ -20,6 +20,7 @@ import {
 import { Badge, Dot } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
+import { downloadProjectZip, downloadWorkspaceFile } from "@/lib/client/download";
 import { FileTree } from "./FileTree";
 import { CodeEditor } from "./CodeEditor";
 import { DiffView } from "./DiffView";
@@ -202,9 +203,15 @@ export function WorkspaceView({ projectId }: { projectId: string }) {
           <Link href={`/chat`} className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12.5px] text-muted hover:bg-surface hover:text-ink">
             <MessageSquare className="size-3.5" /> Chat
           </Link>
-          <a href={`/api/projects/${projectId}/export`} className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12.5px] text-muted hover:bg-surface hover:text-ink">
+          <button
+            type="button"
+            onClick={() => {
+              downloadProjectZip(projectId, project?.name || "aomi-project").catch((cause: Error) => setError(cause.message));
+            }}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12.5px] text-muted hover:bg-surface hover:text-ink"
+          >
             <Download className="size-3.5" /> ZIP
-          </a>
+          </button>
         </div>
       </header>
 
@@ -283,9 +290,15 @@ export function WorkspaceView({ projectId }: { projectId: string }) {
                 <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-[12.5px] text-muted">
                   <AlertCircle className="size-4 text-warn" aria-hidden />
                   <p>{error || "File ini tidak bisa ditampilkan sebagai teks."}</p>
-                  <a href={`/api/projects/${projectId}/files?path=${encodeURIComponent(activePath)}&download=1`} className="text-accent hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      downloadWorkspaceFile(projectId, activePath).catch((cause: Error) => setError(cause.message));
+                    }}
+                    className="text-accent hover:underline"
+                  >
                     Unduh file
-                  </a>
+                  </button>
                 </div>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
