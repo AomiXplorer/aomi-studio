@@ -37,8 +37,27 @@ export function getStore(): BlobStore {
   return cached;
 }
 
+/**
+ * True when this process cannot keep a workspace between requests (serverless
+ * hosts with a per-instance /tmp). The browser then owns the workspace. Override
+ * with AOMI_CLIENT_STORAGE=1 or =0 when the default guess is wrong.
+ */
+export function clientStorageMode(): boolean {
+  const override = (process.env.AOMI_CLIENT_STORAGE || "").toLowerCase();
+  if (override === "1") return true;
+  if (override === "0") return false;
+  return !getStore().persistent;
+}
+
 export function storageStatus() {
   const store = getStore();
+  if (clientStorageMode()) {
+    return {
+      driver: "browser",
+      persistent: true,
+      note: "Workspace disimpan di browser ini dan dikirim ke server pada setiap permintaan, karena filesystem host tidak bertahan antar request.",
+    };
+  }
   return {
     driver: store.driver,
     persistent: store.persistent,

@@ -50,7 +50,7 @@ node scripts/ui-check.mjs <projectId>
 | `BANGUNWEB_AUDIO_MODEL` | no | Default speech model, e.g. `kokoro` |
 | `BANGUNWEB_AUDIO_VOICE` | no | Default voice id |
 | `AOMI_STORAGE` | no | `fs` (default) or `s3` |
-| `NEXT_PUBLIC_AOMI_CLIENT_STORAGE` | no | `1` keeps the workspace in the browser (required on serverless hosts without shared disk) |
+| `AOMI_CLIENT_STORAGE` | no | `1` forces browser storage, `0` forces server storage; empty auto-detects from whether the disk persists |
 | `AOMI_WORKSPACE_DIR` | no | Base directory for the `fs` driver |
 | `S3_ENDPOINT` / `S3_REGION` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_PREFIX` | for `s3` | Object storage for persistent workspaces |
 | `AOMI_MAX_STEPS` | no | Max agent steps per turn (default 14) |
@@ -130,10 +130,10 @@ exercised on Vercel. Three things matter there:
 
 1. **Storage.** Vercel functions get a fresh `/tmp` per instance, so a server-side
    workspace disappears between requests. Pick one:
-   - `NEXT_PUBLIC_AOMI_CLIENT_STORAGE=1` (recommended, no extra service): the browser
-     keeps projects, files and messages in localStorage and sends the workspace with
-     each request; the server rebuilds it in memory for that request, so tools, checks
-     and export keep working. Verified with `scripts/client-mode-check.mjs`.
+   - Browser storage (automatic when the disk cannot persist, no extra service): the
+     browser keeps projects, files and messages in localStorage and sends the workspace
+     with each request; the server rebuilds it in memory for that request, so tools,
+     checks and export keep working. Verified with `scripts/client-mode-check.mjs`.
    - `AOMI_STORAGE=s3` with an S3-compatible bucket (R2, B2, MinIO, AWS) when you want
      the server to own the files.
    The settings page reports which driver is active and whether it persists.

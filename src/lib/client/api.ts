@@ -4,14 +4,24 @@ import type { ProjectMeta, StoredMessage, Asset, FileEntry } from "@/lib/workspa
 import type { ProjectAnalysis } from "@/lib/services/analysis";
 import type { ProviderModel } from "@/lib/ai/types";
 import type { AgentEvent } from "@/lib/agent/engine";
-import { local, sanitizeClientPath, storageNote, LocalStorageError } from "@/lib/client/local-store";
+import { local, sanitizeClientPath, LocalStorageError } from "@/lib/client/local-store";
 
 /**
- * Client storage mode: the browser owns the workspace. Chosen at build time so
- * the same app works on a host with a persistent disk and on serverless hosts
- * where /tmp is per-instance.
+ * Whether the browser owns the workspace. Asked once from the server, so the same
+ * build works on a host with a persistent disk and on serverless hosts where /tmp
+ * is per-instance. A cached promise keeps every call cheap and consistent.
  */
-export const CLIENT_STORAGE = process.env.NEXT_PUBLIC_AOMI_CLIENT_STORAGE === "1";
+let modePromise: Promise<boolean> | null = null;
+
+export function isClientStorage(): Promise<boolean> {
+  if (!modePromise) {
+    modePromise = fetch("/api/providers/status", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { clientStorage?: boolean } | null) => payload?.clientStorage === true)
+      .catch(() => false);
+  }
+  return modePromise;
+}
 
 export class ApiError extends Error {
   status: number;
@@ -48,10 +58,6 @@ export interface ProviderStatus {
   audio: { available: boolean; error?: string; models?: { id: string; voices: number }[]; note?: string };
 }
 
-function browserStorage() {
-  return { driver: "browser", persistent: true, note: storageNote() };
-}
-
 function newProjectId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return `p-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
@@ -78,7 +84,7 @@ async function readUpload(file: File): Promise<{ content: string; encoding: "utf
 export const api = {
   projects: {
     list: async () => {
-      if (CLIENT_STORAGE) {
+      if (await isClientStorage()) {
         const templates = await request<{ templates: { id: string; label: string; description: string }[] }>("/api/scaffold", { method: "GET" }).catch(
           () => ({ templates: [] }),
         );
@@ -87,7 +93,7 @@ export const api = {
       return request<{ projects: ProjectMeta[]; templates: { id: string; label: string; description: string }[] }>("/api/projects");
     },
     create: async (body: { name: string; template?: string; description?: string; model?: string }) => {
-      if (CLIENT_STORAGE) {
+      if (await isClientStorage()) {
         const template = body.template || "blank";
         const scaffold = await request<{ stack: string; files: { path: string; content: string }[] }>("/api/scaffold", {
           method: "POST",
@@ -114,19 +120,22 @@ export const api = {
       return request<{ project: ProjectMeta }>("/api/projects", { method: "POST", body: JSON.stringify(body) });
     },
     get: async (id: string) => {
-      if (CLIENT_STORAGE) {
+      if (await isClientStorage()) {
         const project = local.projects.get(id);
         if (!project) throw new ApiError("Project tidak ditemukan.", 404);
-        return { project, storage: browserStorage() };
+        return {
+          project,
+          storage: { driver: "browser", persistent: true, note: "Workspace disimpan di browser ini." },
+        };
       }
       return request<{ project: ProjectMeta; storage: ProviderStatus["storage"] }>(`/api/projects/${id}`);
     },
     update: async (id: string, body: Partial<Pick<ProjectMeta, "name" | "description" | "model" | "stack">>) => {
-      if (CLIENT_STORAGE) return { project: local.projects.update(id, body) };
+      if (await isClientStorage()) return { project: local.projects.update(id, body) };
       return request<{ project: ProjectMeta }>(`/api/projects/${id}`, { method: "PATCH", body: JSON.stringify(body) });
     },
     remove: async (id: string) => {
-      if (CLIENT_STORAGE) {
+      if (await isClientStorage()) {
         local.projects.remove(id);
         return { ok: true };
       }
@@ -135,24 +144,24 @@ export const api = {
   },
   files: {
     list: async (id: string) => {
-      if (CLIENT_STORAGE) return { files: local.files.list(id) };
+      if (await isClientStorage()) return { files: local.files.list(id) };
       return request<{ files: FileEntry[] }>(`/api/projects/${id}/files`);
     },
     read: async (id: string, path: string) => {
-      if (CLIENT_STORAGE) return { file: local.files.read(id, path) };
+      if (await isClientStorage()) return { file: local.files.read(id, path) };
       return request<{ file: { path: string; content: string; encoding: "utf8" | "base64"; size: number; mime: string } }>(
         `/api/projects/${id}/files?path=${encodeURIComponent(path)}`,
       );
     },
     save: async (id: string, path: string, content: string) => {
-      if (CLIENT_STORAGE) {
+      if (await isClientStorage()) {
         const result = local.files.write(id, path, content);
         return { ok: true, before: result.before };
       }
       return request<{ ok: boolean; before: string | null }>(`/api/projects/${id}/files`, { method: "PUT", body: JSON.stringify({ path, content }) });
     },
     saveBinary: async (id: string, path: string, dataUrl: string) => {
-      if (CLIENT_STORAGE) {
+      if (await isClientStorage()) {
         const base64 = dataUrl.includes(",") ? dataUrl.slice(dataUrl.indexOf(",") + 1) : dataUrl;
         local.files.write(id, path, base64, "base64");
         return { ok: true };
@@ -160,14 +169,14 @@ export const api = {
       return request<{ ok: boolean }>(`/api/projects/${id}/files`, { method: "PUT", body: JSON.stringify({ path, content: dataUrl, encoding: "base64" }) });
     },
     remove: async (id: string, path: string) => {
-      if (CLIENT_STORAGE) {
+      if (await isClientStorage()) {
         local.files.remove(id, path);
         return { ok: true };
       }
       return request<{ ok: boolean }>(`/api/projects/${id}/files`, { method: "DELETE", body: JSON.stringify({ path }) });
     },
     rename: async (id: string, from: string, to: string) => {
-      if (CLIENT_STORAGE) {
+      if (await isClientStorage()) {
         local.files.rename(id, from, to);
         return { ok: true };
       }
@@ -176,17 +185,17 @@ export const api = {
   },
   messages: {
     list: async (id: string) => {
-      if (CLIENT_STORAGE) return { messages: local.messages.list(id) };
+      if (await isClientStorage()) return { messages: local.messages.list(id) };
       return request<{ messages: StoredMessage[] }>(`/api/projects/${id}/messages`);
     },
   },
   assets: {
     list: async (id: string) => {
-      if (CLIENT_STORAGE) return { assets: local.assets.list(id) };
+      if (await isClientStorage()) return { assets: local.assets.list(id) };
       return request<{ assets: Asset[] }>(`/api/projects/${id}/assets`);
     },
     remove: async (id: string, assetId: string) => {
-      if (CLIENT_STORAGE) {
+      if (await isClientStorage()) {
         local.assets.remove(id, assetId);
         return { ok: true };
       }
@@ -195,7 +204,7 @@ export const api = {
   },
   analysis: {
     get: async (id: string) => {
-      if (CLIENT_STORAGE) {
+      if (await isClientStorage()) {
         return request<{ analysis: ProjectAnalysis }>(`/api/projects/${id}/analyze`, {
           method: "POST",
           body: JSON.stringify({ workspace: local.workspace(id) }),
@@ -209,9 +218,7 @@ export const api = {
   },
   status: {
     get: async (refresh = false) => {
-      const status = await request<ProviderStatus>(`/api/providers/status${refresh ? "?refresh=1" : ""}`);
-      if (CLIENT_STORAGE) return { ...status, storage: browserStorage() };
-      return status;
+      return request<ProviderStatus>(`/api/providers/status${refresh ? "?refresh=1" : ""}`);
     },
   },
   voices: {
@@ -223,7 +230,7 @@ export const api = {
         method: "POST",
         body: JSON.stringify(body),
       });
-      if (CLIENT_STORAGE && body.saveToProject && body.projectId && payload.asset) {
+      if ((await isClientStorage()) && body.saveToProject && body.projectId && payload.asset) {
         local.assets.save(body.projectId, payload.asset);
       }
       return payload;
@@ -235,14 +242,14 @@ export const api = {
         method: "POST",
         body: JSON.stringify(body),
       });
-      if (CLIENT_STORAGE && body.projectId && payload.asset) {
+      if ((await isClientStorage()) && body.projectId && payload.asset) {
         local.assets.save(body.projectId, payload.asset);
       }
       return payload;
     },
   },
   upload: async (projectId: string, file: File) => {
-    if (CLIENT_STORAGE) {
+    if (await isClientStorage()) {
       if (file.size > 2 * 1024 * 1024) throw new ApiError("Ukuran file melebihi 2 MB.", 413);
       const { content, encoding } = await readUpload(file);
       const path = sanitizeClientPath(`uploads/${file.name}`);
@@ -298,7 +305,7 @@ export async function streamChat(
   body: { projectId: string; message: string; model?: string; temperature?: number; attachments?: { name: string; path: string }[] },
   handlers: StreamHandlers,
 ): Promise<void> {
-  const payload = CLIENT_STORAGE ? { ...body, workspace: local.workspace(body.projectId) } : body;
+  const payload = (await isClientStorage()) ? { ...body, workspace: local.workspace(body.projectId) } : body;
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

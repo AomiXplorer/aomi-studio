@@ -1,6 +1,6 @@
 "use client";
 
-import { CLIENT_STORAGE } from "./api";
+import { isClientStorage } from "./api";
 import { local } from "./local-store";
 
 function triggerDownload(blob: Blob, filename: string): void {
@@ -33,7 +33,7 @@ function slugify(value: string): string {
 
 /** Downloads the project ZIP from whichever side actually holds the files. */
 export async function downloadProjectZip(projectId: string, name: string): Promise<void> {
-  if (!CLIENT_STORAGE) {
+  if (!(await isClientStorage())) {
     window.location.href = `/api/projects/${projectId}/export`;
     return;
   }
@@ -57,7 +57,7 @@ export async function downloadProjectZip(projectId: string, name: string): Promi
 
 /** Downloads a single file, reading it locally when the browser owns it. */
 export async function downloadWorkspaceFile(projectId: string, path: string): Promise<void> {
-  if (!CLIENT_STORAGE) {
+  if (!(await isClientStorage())) {
     window.location.href = `/api/projects/${projectId}/files?path=${encodeURIComponent(path)}&download=1`;
     return;
   }

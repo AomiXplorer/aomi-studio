@@ -1,6 +1,6 @@
 import { aiConfig, providerKeyConfigured } from "@/lib/ai/config";
 import { checkConnection, listModels, listVoices } from "@/lib/ai/bangunweb";
-import { storageStatus } from "@/lib/workspace/store";
+import { clientStorageMode, storageStatus } from "@/lib/workspace/store";
 import { json } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -18,6 +18,7 @@ export async function GET(request: Request) {
     return json({
       configured: false,
       storage,
+    clientStorage: clientStorageMode(),
       chat: { available: false, error: "BANGUNWEB_API_KEY belum diatur." },
       image: { available: false, error: "BANGUNWEB_API_KEY belum diatur." },
       audio: { available: false, error: "BANGUNWEB_API_KEY belum diatur." },
@@ -54,6 +55,7 @@ export async function GET(request: Request) {
     baseUrl: aiConfig.baseUrl,
     defaultModel: aiConfig.defaultModel,
     storage,
+    clientStorage: clientStorageMode(),
     chat: { available: connection.ok, models: textModels, error: connection.error },
     image: {
       available: imageModels.length > 0,
