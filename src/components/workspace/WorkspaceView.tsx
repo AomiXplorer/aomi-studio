@@ -184,7 +184,7 @@ export function WorkspaceView({ projectId }: { projectId: string }) {
           <PanelLeft className="size-3.5" />
         </Button>
         <div className="min-w-0">
-          <p className="truncate text-[13px] font-medium text-ink">{project?.name || "Workspace"}</p>
+          <h1 className="truncate text-[13px] font-medium text-ink">{project?.name || "Workspace"}</h1>
           <p className="flex items-center gap-1.5 text-[11px] text-faint">
             <Dot tone="neutral" /> {project?.stack} · {files.length} file
           </p>
