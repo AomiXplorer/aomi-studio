@@ -22,7 +22,10 @@ export class FsBlobStore implements BlobStore {
   private base: string;
 
   constructor() {
-    this.base = process.env.AOMI_WORKSPACE_DIR || path.join(process.cwd(), ".aomi-data", "workspace");
+    // On Vercel only /tmp is writable, and it is per-instance: data survives the
+    // instance, not a redeploy or a cold start on another function instance.
+    const fallback = process.env.VERCEL ? "/tmp/aomi-workspace" : path.join(process.cwd(), ".aomi-data", "workspace");
+    this.base = process.env.AOMI_WORKSPACE_DIR || fallback;
     this.persistent = !process.env.VERCEL;
   }
 

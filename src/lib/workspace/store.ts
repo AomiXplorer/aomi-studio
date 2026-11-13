@@ -34,7 +34,7 @@ export function storageStatus() {
         ? "Workspace tersimpan permanen di object storage S3-compatible."
         : store.persistent
           ? "Workspace tersimpan di filesystem host ini dan bertahan antar restart."
-          : "Workspace disimpan di filesystem sementara (/tmp). Di Vercel isinya hilang saat instance didaur ulang, jadi untuk produksi set AOMI_STORAGE=s3.",
+          : "Workspace disimpan di /tmp yang bersifat per-instance. Di Vercel file bisa hilang saat cold start atau pindah instance, jadi untuk data yang bertahan set AOMI_STORAGE=s3 dengan bucket S3-compatible.",
   };
 }
 
