@@ -24,6 +24,7 @@ export type AgentEvent =
   | { type: "tool_end"; id: string; name: string; ok: boolean; summary: string; data?: unknown }
   | { type: "file_changed"; change: FileChange }
   | { type: "usage"; usage: TokenUsage }
+  | { type: "turn_paused"; note: string }
   | { type: "error"; message: string; code?: string }
   | { type: "done"; status: AgentStatus };
 
@@ -37,6 +38,8 @@ export interface RunAgentOptions {
   maxSteps?: number;
   temperature?: number;
   tokenBudget?: number;
+  /** Epoch ms after which the turn stops so the client can resume on the next request. */
+  deadlineAt?: number;
 }
 
 export interface RunAgentResult {
@@ -49,6 +52,8 @@ export interface RunAgentResult {
   status: "completed" | "failed";
   error?: string;
   steps: number;
+  /** True when the turn stopped on its time budget instead of finishing. */
+  paused: boolean;
 }
 
 const WRITE_TOOLS = new Set(["create_file", "write_file", "edit_file", "delete_file", "rename_file", "generate_project"]);
@@ -96,6 +101,10 @@ export async function runAgent(options: RunAgentOptions): Promise<RunAgentResult
   let steps = 0;
   let status: "completed" | "failed" = "completed";
   let errorMessage: string | undefined;
+  let paused = false;
+
+  const outOfTime = () =>
+    typeof options.deadlineAt === "number" && Date.now() >= options.deadlineAt;
 
   const context = {
     projectId,
@@ -125,6 +134,12 @@ export async function runAgent(options: RunAgentOptions): Promise<RunAgentResult
         errorMessage = "Dibatalkan oleh pengguna.";
         break;
       }
+      if (outOfTime()) {
+        // A serverless host kills the request at its limit; stop here and let the
+        // browser ask for the next slice instead of losing the answer mid-sentence.
+        paused = true;
+        break;
+      }
       steps = step + 1;
       emit({ type: "status", status: step === 0 ? "thinking" : "planning", detail: `Langkah ${step + 1}` });
 
@@ -151,6 +166,8 @@ export async function runAgent(options: RunAgentOptions): Promise<RunAgentResult
 
       messages.push({ role: "assistant", content: turn.content, tool_calls: turn.toolCalls });
 
+      // Tool calls that already arrived always run: they are fast, and dropping
+      // them here would discard the very work the model just asked for.
       for (const call of turn.toolCalls) {
         if (signal?.aborted) {
           status = "failed";
@@ -206,7 +223,7 @@ export async function runAgent(options: RunAgentOptions): Promise<RunAgentResult
         emit({ type: "status", status: "failed", detail: errorMessage });
         break;
       }
-      if (status === "failed") break;
+      if (status === "failed" || paused) break;
     }
   } catch (error) {
     status = "failed";
@@ -215,6 +232,9 @@ export async function runAgent(options: RunAgentOptions): Promise<RunAgentResult
   }
 
   const content = textParts.join("\n\n").trim();
+  if (paused) {
+    emit({ type: "turn_paused", note: "Batas waktu permintaan tercapai, pekerjaan dilanjutkan otomatis." });
+  }
   emit({ type: "status", status: status === "completed" ? "completed" : "failed", detail: status === "completed" ? undefined : errorMessage });
   emit({ type: "done", status });
 
@@ -228,5 +248,6 @@ export async function runAgent(options: RunAgentOptions): Promise<RunAgentResult
     status,
     error: errorMessage,
     steps,
+    paused,
   };
 }

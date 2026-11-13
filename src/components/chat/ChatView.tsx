@@ -141,6 +141,10 @@ export function ChatView() {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages, status]);
 
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("new")) setShowNew(true);
+  }, []);
+
   const createProject = async () => {
     if (!newName.trim()) return;
     setCreating(true);
@@ -226,15 +230,37 @@ export function ChatView() {
     abortRef.current = controller;
 
     try {
-      await streamChat(
-        {
-          projectId: activeProject.id,
-          message: text,
-          model: model || undefined,
-          attachments: attachments.map((file) => ({ name: file.name, path: file.path })),
-        },
-        { onEvent: handleEvent, signal: controller.signal },
-      );
+      // A single serverless request is capped in time, so a long build continues
+      // in follow-up slices that extend the same answer instead of dying halfway.
+      let slices = 0;
+      let paused = false;
+      do {
+        paused = false;
+        await streamChat(
+          {
+            projectId: activeProject.id,
+            message:
+              slices === 0
+                ? text
+                : "Lanjutkan tepat dari kondisi workspace sekarang. Jangan mengulang rencana atau memeriksa ulang; langsung tulis file yang belum ada, lalu selesaikan sisanya.",
+            continuation: slices > 0,
+            model: model || undefined,
+            attachments: slices === 0 ? attachments.map((file) => ({ name: file.name, path: file.path })) : [],
+          },
+          {
+            signal: controller.signal,
+            onEvent: (event) => {
+              if (event.type === "turn_paused") {
+                paused = true;
+                setStatusDetail("Melanjutkan otomatis");
+                return;
+              }
+              handleEvent(event);
+            },
+          },
+        );
+        slices += 1;
+      } while (paused && slices < 6 && !controller.signal.aborted);
       await loadMessages(activeProject.id);
       setProjects((current) =>
         current.map((project) => (project.id === activeProject.id ? { ...project, updatedAt: new Date().toISOString() } : project)),
@@ -276,8 +302,8 @@ export function ChatView() {
 
   return (
     <div className="flex h-[calc(100dvh-3.5rem)] flex-col lg:h-dvh">
-      <header className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2.5">
-        <div className="flex min-w-0 items-center gap-2">
+      <header className="flex flex-wrap items-center gap-1.5 px-3 py-2 sm:px-5">
+        <div className="flex min-w-0 items-center gap-1">
           <Select
             aria-label="Pilih project"
             value={activeId || ""}
@@ -289,7 +315,7 @@ export function ChatView() {
               }
               if (value) void selectProject(value);
             }}
-            className="h-8 w-[190px] text-[12.5px]"
+            className="h-8 w-[196px] border-transparent bg-transparent text-[13px] font-medium hover:border-line"
           >
             {projects.length === 0 ? <option value="">Belum ada project</option> : null}
             {projects.map((project) => (
@@ -299,17 +325,23 @@ export function ChatView() {
             ))}
             <option value="__new">+ Project baru</option>
           </Select>
-          <Button variant="ghost" size="sm" onClick={() => setShowNew(true)} aria-label="Project baru">
-            <Plus className="size-3.5" />
-          </Button>
+          <button
+            type="button"
+            onClick={() => setShowNew(true)}
+            aria-label="Project baru"
+            title="Project baru"
+            className="grid size-8 place-items-center rounded-lg text-faint transition-colors hover:bg-surface hover:text-ink"
+          >
+            <Plus className="size-4" />
+          </button>
         </div>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-0.5">
           {activeProject ? (
             <>
               <Link
                 href={`/projects/${activeProject.id}`}
-                className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12.5px] text-muted transition-colors hover:bg-surface hover:text-ink"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] text-muted transition-colors hover:bg-surface hover:text-ink"
               >
                 <FolderOpen className="size-3.5" /> Workspace
               </Link>
@@ -318,34 +350,17 @@ export function ChatView() {
                 onClick={() => {
                   downloadProjectZip(activeProject.id, activeProject.name).catch((error: Error) => setError(error.message));
                 }}
-                className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12.5px] text-muted transition-colors hover:bg-surface hover:text-ink"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] text-muted transition-colors hover:bg-surface hover:text-ink"
               >
                 <Download className="size-3.5" /> ZIP
               </button>
             </>
           ) : null}
-          <Select
-            aria-label="Pilih model"
-            value={model}
-            onChange={(event) => {
-              setModel(event.target.value);
-              window.localStorage.setItem("aomi:model", event.target.value);
-            }}
-            className="h-8 w-[168px] text-[12.5px]"
-          >
-            {textModels.length === 0 ? <option value="">Model belum tersedia</option> : null}
-            {textModels.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-                {item.tier ? ` · ${item.tier}` : ""}
-              </option>
-            ))}
-          </Select>
         </div>
       </header>
 
       {changes.length ? (
-        <div className="flex flex-wrap items-center gap-1.5 border-b border-line bg-panel/60 px-4 py-2">
+        <div className="flex flex-wrap items-center gap-1.5 px-3 pb-1 pt-0.5 sm:px-5">
           <span className="mr-1 flex items-center gap-1.5 text-[11.5px] text-muted">
             <FileCode2 className="size-3.5 text-accent" /> {changes.length} file berubah
           </span>
@@ -354,7 +369,7 @@ export function ChatView() {
               key={change.path}
               type="button"
               onClick={() => setOpenChange(change)}
-              className="max-w-[220px] truncate rounded border border-line bg-surface px-1.5 py-0.5 font-mono text-[11px] text-ink-dim hover:border-line-strong"
+              className="max-w-[220px] truncate rounded-md border border-line bg-raised px-1.5 py-0.5 font-mono text-[11px] text-ink-dim transition-colors hover:border-line-strong hover:bg-surface"
             >
               {change.path}
             </button>
@@ -363,41 +378,42 @@ export function ChatView() {
       ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-5">
+        <div className="mx-auto w-full max-w-[760px] px-4 py-6 sm:px-6">
           {loading ? (
             <div className="flex items-center gap-2 text-[13px] text-muted">
               <Spinner /> Memuat workspace...
             </div>
           ) : messages.length === 0 ? (
-            <div className="py-8">
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-faint">Aomi</p>
-              <h1 className="mt-2 text-[22px] font-medium leading-snug tracking-tight text-ink">
-                Jelaskan yang ingin dibangun. Aomi yang menulis filenya.
+            <div className="aomi-rise flex min-h-[56vh] flex-col items-center justify-center pb-6 text-center">
+              <span className="grid size-11 place-items-center rounded-2xl bg-accent/10 text-accent">
+                <Sparkles className="size-5" aria-hidden />
+              </span>
+              <h1 className="mt-4 text-[23px] font-semibold leading-tight tracking-tight text-ink sm:text-[26px]">
+                Mau dibangun apa hari ini?
               </h1>
-              <p className="mt-2 max-w-prose text-[13.5px] leading-relaxed text-muted">
-                Setiap pekerjaan berjalan di workspace project ini: file dibuat sungguhan, perubahan bisa dilihat, dan hasilnya bisa diunduh sebagai ZIP.
+              <p className="mt-2 max-w-[48ch] text-[13.5px] leading-relaxed text-muted">
+                Tulis satu kalimat. Aomi menyusun rencana, menulis file sungguhan di workspace project ini, dan hasilnya bisa kamu buka atau unduh sebagai ZIP.
               </p>
-              <div className="mt-6 grid gap-2 sm:grid-cols-2">
+              <div className="mt-6 grid w-full max-w-[620px] gap-2 sm:grid-cols-2">
                 {EXAMPLES.map((example) => (
                   <button
                     key={example}
                     type="button"
                     onClick={() => void send(example)}
-                    className="group flex items-start gap-2 rounded-lg border border-line bg-panel px-3 py-2.5 text-left text-[12.5px] leading-relaxed text-ink-dim transition-colors hover:border-line-strong hover:bg-surface"
+                    className="rounded-xl border border-line bg-raised px-3.5 py-3 text-left text-[12.5px] leading-relaxed text-ink-dim transition-colors duration-150 hover:border-line-strong hover:bg-surface"
                   >
-                    <Sparkles className="mt-0.5 size-3.5 shrink-0 text-faint group-hover:text-accent" aria-hidden />
                     {example}
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            <ul className="space-y-6">
+            <ul className="space-y-7">
               {messages.map((message) => (
                 <li key={message.id}>
                   {message.role === "user" ? (
                     <div className="flex justify-end">
-                      <div className="max-w-[85%] rounded-lg rounded-br-sm border border-line bg-surface px-3.5 py-2.5 text-[13.5px] leading-relaxed text-ink">
+                      <div className="max-w-[85%] rounded-[18px] rounded-br-md bg-surface px-4 py-2.5 text-[14px] leading-relaxed text-ink">
                         <p className="whitespace-pre-wrap">{message.content}</p>
                         {message.attachments?.length ? (
                           <p className="mt-1.5 font-mono text-[11px] text-faint">{message.attachments.map((file) => file.path).join(", ")}</p>
@@ -405,10 +421,12 @@ export function ChatView() {
                       </div>
                     </div>
                   ) : (
-                    <div>
-                      <div className="mb-1.5 flex items-center gap-2">
-                        <span className="font-mono text-[11px] lowercase tracking-tight text-ink">aomi</span>
-                        <span className="size-1 rounded-full bg-accent" aria-hidden />
+                    <div className="aomi-rise">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="grid size-5 place-items-center rounded-md bg-accent text-[11px] font-semibold text-accent-ink" aria-hidden>
+                          a
+                        </span>
+                        <span className="text-[12.5px] font-medium text-ink">Aomi</span>
                         {message.usage ? (
                           <span className="font-mono text-[10.5px] text-faint">{formatNumber(message.usage.billedTokens)} token</span>
                         ) : null}
@@ -441,16 +459,38 @@ export function ChatView() {
         </div>
       </div>
 
-      <div className="border-t border-line bg-panel/40">
-        <StatusRail status={status} detail={statusDetail} />
+      <div className="pt-1">
+        <div className="mx-auto w-full max-w-[760px]">
+          <StatusRail status={status} detail={statusDetail} />
+        </div>
         {sessionBilled > 0 ? (
-          <div className="flex items-center gap-2 px-4 pb-1 pt-1.5 text-[11px] text-faint">
+          <div className="flex items-center gap-2 px-4 pb-1 pl-6 pt-0.5 text-[11px] text-faint sm:px-6">
             <Dot tone="neutral" /> Sesi ini: {formatNumber(sessionBilled)} token ditagihkan provider
           </div>
         ) : null}
       </div>
 
       <Composer
+        hint={activeProject ? `${activeProject.name} · ${changes.length ? `${changes.length} file berubah` : "siap menulis"}` : null}
+        modelSlot={
+          <Select
+            aria-label="Pilih model"
+            value={model}
+            onChange={(event) => {
+              setModel(event.target.value);
+              window.localStorage.setItem("aomi:model", event.target.value);
+            }}
+            className="h-8 max-w-[168px] border-transparent bg-transparent pr-7 text-[12px] text-muted hover:border-line"
+          >
+            {textModels.length === 0 ? <option value="">Model belum tersedia</option> : null}
+            {textModels.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+                {item.tier ? ` · ${item.tier}` : ""}
+              </option>
+            ))}
+          </Select>
+        }
         onSend={(text) => void send(text)}
         onStop={stop}
         streaming={streaming}

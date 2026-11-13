@@ -4,7 +4,7 @@ import { forwardRef, useId } from "react";
 import { cn } from "@/lib/utils";
 
 const base =
-  "w-full rounded-md border border-line bg-panel px-3 py-2 text-[13px] text-ink placeholder:text-faint transition-colors duration-150 focus:border-line-strong focus:outline-none focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50";
+  "w-full rounded-[10px] border border-line bg-raised px-3 py-2 text-[13px] text-ink placeholder:text-faint transition-colors duration-150 hover:border-line-strong focus:border-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50";
 
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input(
   { className, ...props },

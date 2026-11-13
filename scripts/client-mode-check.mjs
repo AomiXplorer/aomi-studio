@@ -43,10 +43,10 @@ try {
   await page.type('input[placeholder="Portfolio programmer"]', "Client Mode Check");
   await page.keyboard.press("Enter");
 
-  const composer = 'textarea[aria-label="Pesan untuk Aomi"]';
+  const composer = '#aomi-composer';
   await page.waitForSelector(composer, { timeout: 20000 });
   await page.waitForFunction(
-    () => document.querySelector('textarea[aria-label="Pesan untuk Aomi"]')?.placeholder?.includes("Client Mode Check") === true,
+    () => document.querySelector('#aomi-composer')?.placeholder?.includes("Client Mode Check") === true,
     { timeout: 20000 },
   );
   log("   project active");
@@ -54,7 +54,7 @@ try {
   log("2. ask the agent to write a file");
   await page.type(composer, "Buat file catatan.txt berisi dua kalimat sapaan singkat.");
   const clicked = await page.evaluate(() => {
-    const button = [...document.querySelectorAll("button")].find((element) => element.textContent?.trim().startsWith("Kirim"));
+    const button = document.querySelector('button[aria-label="Kirim pesan"]');
     if (!button) return false;
     button.click();
     return true;

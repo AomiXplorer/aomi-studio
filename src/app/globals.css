@@ -1,54 +1,114 @@
 @import "tailwindcss";
 
-@theme {
-  --color-bg: #09090b;
-  --color-panel: #111113;
-  --color-surface: #18181b;
-  --color-raised: #1f1f23;
-  --color-line: #27272a;
-  --color-line-strong: #3a3a3f;
-  --color-ink: #fafafa;
-  --color-ink-dim: #d4d4d8;
-  --color-muted: #a1a1aa;
-  --color-faint: #71717a;
-  --color-accent: #e7a0b4;
-  --color-accent-ink: #2a0f18;
-  --color-ok: #86c9a4;
-  --color-warn: #e2bd7c;
-  --color-danger: #e58f8f;
+/* Tokens are indirected through plain CSS variables so one class on <html>
+   switches the whole app between the light and dark surfaces. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
 
-  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+}
+
+:root {
+  --bg: #ffffff;
+  --panel: #fafafa;
+  --surface: #f4f4f6;
+  --raised: #ffffff;
+  --line: #e8e8ec;
+  --line-strong: #d3d3dc;
+  --ink: #16161a;
+  --ink-dim: #3f3f47;
+  --muted: #5f5f68;
+  --faint: #6f6f7a;
+  /* One ink accent instead of a violet one: the palette is neutral, and a black
+     CTA is the calmest way to signal the primary action. */
+  --accent: #18181b;
+  --accent-ink: #fafafa;
+  --ok: #0f7a55;
+  --warn: #a5690f;
+  --danger: #b02a2a;
+  --syntax-keyword: #1b6b8f;
+  --syntax-string: #16694c;
+  --syntax-comment: #6f6f7a;
+  --syntax-number: #b23a63;
+  --syntax-title: #1f5fa8;
+  --syntax-var: #2f2f36;
+  --shadow-soft: 0 1px 2px rgb(16 16 22 / 0.04), 0 8px 24px -16px rgb(16 16 22 / 0.18);
+  --composer-shadow: 0 1px 2px rgb(16 16 22 / 0.05), 0 12px 32px -20px rgb(16 16 22 / 0.24);
+}
+
+.dark {
+  --bg: #09090b;
+  --panel: #111113;
+  --surface: #18181b;
+  --raised: #1f1f23;
+  --line: #27272a;
+  --line-strong: #3a3a3f;
+  --ink: #fafafa;
+  --ink-dim: #d4d4d8;
+  --muted: #a1a1aa;
+  --faint: #8b8b96;
+  --accent: #fafafa;
+  --accent-ink: #111113;
+  --ok: #86c9a4;
+  --warn: #e2bd7c;
+  --danger: #e58f8f;
+  --syntax-keyword: #8cc4dd;
+  --syntax-string: #9fd8b6;
+  --syntax-comment: #8b8b96;
+  --syntax-number: #e7a0b4;
+  --syntax-title: #9dc7f0;
+  --syntax-var: #d4d4d8;
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.5);
+  --composer-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
 }
 
 @layer base {
   * {
-    border-color: var(--color-line);
+    border-color: var(--line);
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
     -webkit-text-size-adjust: 100%;
   }
 
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
-    background-color: var(--color-bg);
-    color: var(--color-ink);
+    background-color: var(--bg);
+    color: var(--ink);
     font-family: var(--font-sans);
-    font-feature-settings: "ss01" 1, "cv11" 1;
+    font-feature-settings: "ss01" 1;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--color-accent) 32%, transparent);
-    color: var(--color-ink);
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--ink);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
-    border-radius: 3px;
+    border-radius: 6px;
   }
 
   ::-webkit-scrollbar {
@@ -61,13 +121,13 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #2c2c31;
-    border: 2px solid var(--color-bg);
+    background: color-mix(in srgb, var(--ink) 16%, transparent);
+    border: 2px solid var(--bg);
     border-radius: 999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #3d3d43;
+    background: color-mix(in srgb, var(--ink) 26%, transparent);
   }
 
   input,
@@ -79,6 +139,12 @@
 
   textarea {
     field-sizing: content;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
   }
 }
 
@@ -119,7 +185,7 @@
   width: 7px;
   height: 1.05em;
   translate: 0 0.14em;
-  background: var(--color-accent);
+  background: var(--accent);
   animation: aomi-blink 1.1s steps(2, start) infinite;
 }
 
@@ -127,38 +193,67 @@
   animation: aomi-rise 220ms ease-out both;
 }
 
+.aomi-shadow {
+  box-shadow: var(--shadow-soft);
+}
+
+.aomi-composer {
+  box-shadow: var(--composer-shadow);
+}
+
+/* The editor component ships its own light base theme; these rules keep the
+   canvas, gutters and text tied to the app tokens in both themes. */
+.cm-editor,
+.cm-editor .cm-gutters {
+  background-color: var(--bg) !important;
+}
+
+.cm-editor .cm-content,
+.cm-editor .cm-line {
+  color: var(--ink);
+}
+
+/* Syntax highlighting follows the tokens, so markdown and the editor agree. */
 .hljs {
-  color: #d4d4d8;
+  color: var(--syntax-var);
   background: transparent;
 }
 
 .hljs-keyword,
 .hljs-selector-tag,
-.hljs-literal {
-  color: #c9a6f2;
+.hljs-literal,
+.hljs-tag,
+.hljs-name {
+  color: var(--syntax-keyword);
 }
 
 .hljs-string,
-.hljs-attr {
-  color: #a6d7b8;
+.hljs-attr,
+.hljs-attribute {
+  color: var(--syntax-string);
 }
 
-.hljs-comment {
-  color: #6b6b74;
+.hljs-comment,
+.hljs-quote {
+  color: var(--syntax-comment);
   font-style: italic;
 }
 
 .hljs-number,
-.hljs-built_in {
-  color: #e7a0b4;
+.hljs-built_in,
+.hljs-symbol {
+  color: var(--syntax-number);
 }
 
 .hljs-title,
-.hljs-function {
-  color: #9dc7f0;
+.hljs-function,
+.hljs-type,
+.hljs-class .hljs-title {
+  color: var(--syntax-title);
 }
 
 .hljs-variable,
-.hljs-params {
-  color: #d4d4d8;
+.hljs-params,
+.hljs-property {
+  color: var(--syntax-var);
 }

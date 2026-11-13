@@ -123,7 +123,9 @@ export function ImageStudio() {
                 aria-pressed={ratio === value}
                 className={cn(
                   "rounded-md border px-2 py-1 font-mono text-[11.5px] transition-colors",
-                  ratio === value ? "border-accent/60 bg-accent/10 text-accent" : "border-line text-muted hover:border-line-strong hover:text-ink",
+                  ratio === value
+                    ? "border-transparent bg-accent font-medium text-accent-ink"
+                    : "border-line text-muted hover:border-line-strong hover:text-ink",
                 )}
               >
                 {value}

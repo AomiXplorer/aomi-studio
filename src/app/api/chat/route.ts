@@ -7,6 +7,7 @@ import {
   getMessages,
   getProject,
   newId,
+  replaceMessages,
   touchProject,
   type StoredMessage,
 } from "@/lib/workspace/service";
@@ -27,6 +28,8 @@ const schema = z.object({
   model: z.string().min(1).max(120).optional(),
   temperature: z.number().min(0).max(1.5).optional(),
   attachments: z.array(z.object({ name: z.string().max(160), path: z.string().max(300) })).max(6).optional(),
+  /** A follow-up slice of the same request, after the previous one hit the time budget. */
+  continuation: z.boolean().optional(),
   /** Present in client storage mode: the browser owns the workspace. */
   workspace: z
     .object({
@@ -72,6 +75,9 @@ export async function POST(request: Request) {
   const parsed = await parseBody(request, schema);
   if (parsed.error) return parsed.error;
   const { projectId, message, model, temperature, attachments, workspace } = parsed.data;
+  const continuation = parsed.data.continuation === true;
+  const budget = Math.min(Math.max(Number(process.env.AOMI_TURN_BUDGET_MS || 42_000), 8_000), 52_000);
+  const deadlineAt = Date.now() + budget;
 
   let session: Session | null = null;
   if (workspace) {
@@ -104,11 +110,13 @@ export async function POST(request: Request) {
     createdAt: new Date().toISOString(),
     attachments: attachments?.map((file) => ({ name: file.name, path: file.path })),
   };
-  await inScope(() => appendMessage(projectId, userMessage));
+  if (!continuation) {
+    await inScope(() => appendMessage(projectId, userMessage));
+  }
   await inScope(() => touchProject(projectId, { model: model || project.model }));
 
   const history = toHistory(await inScope(() => getMessages(projectId)));
-  history.pop(); // the message we just stored is passed separately
+  if (!continuation) history.pop(); // the message we just stored is passed separately
 
   const abort = new AbortController();
   request.signal.addEventListener("abort", () => abort.abort());
@@ -139,7 +147,7 @@ export async function POST(request: Request) {
       };
 
       void inScope(async () => {
-        send({ type: "user_saved", message: userMessage });
+        if (!continuation) send({ type: "user_saved", message: userMessage });
 
         try {
           const result = await runAgent({
@@ -149,6 +157,7 @@ export async function POST(request: Request) {
             userMessage: message + attachmentNote,
             temperature,
             signal: abort.signal,
+            deadlineAt,
             emit: send as (event: AgentEvent) => void,
           });
 
@@ -162,8 +171,30 @@ export async function POST(request: Request) {
             toolCalls: result.toolCalls,
             status: result.status === "completed" ? "completed" : "failed",
           };
-          await appendMessage(projectId, assistant);
-          send({ type: "assistant_saved", message: assistant });
+          if (continuation) {
+            // Keep one answer bubble per request: continuation slices extend it.
+            const stored = await inScope(() => getMessages(projectId));
+            const last = stored[stored.length - 1];
+            if (last && last.role === "assistant") {
+              const merged: StoredMessage = {
+                ...last,
+                content: [last.content, assistant.content].filter(Boolean).join("\n\n"),
+                toolCalls: [...(last.toolCalls ?? []), ...(assistant.toolCalls ?? [])],
+                usage: assistant.usage ?? last.usage,
+                status: assistant.status,
+                model: assistant.model ?? last.model,
+              };
+              await inScope(() => replaceMessages(projectId, [...stored.slice(0, -1), merged]));
+              send({ type: "assistant_saved", message: merged });
+            } else {
+              await appendMessage(projectId, assistant);
+              send({ type: "assistant_saved", message: assistant });
+            }
+          } else {
+            await appendMessage(projectId, assistant);
+            send({ type: "assistant_saved", message: assistant });
+          }
+          if (result.paused) send({ type: "turn_paused", note: "Batas waktu permintaan tercapai, pekerjaan dilanjutkan otomatis." } as AgentEvent);
         } catch (error) {
           const failure: StoredMessage = {
             id: newId(),

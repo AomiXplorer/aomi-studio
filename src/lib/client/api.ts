@@ -302,7 +302,14 @@ function applySnapshot(event: SnapshotEvent): void {
 }
 
 export async function streamChat(
-  body: { projectId: string; message: string; model?: string; temperature?: number; attachments?: { name: string; path: string }[] },
+  body: {
+    projectId: string;
+    message: string;
+    model?: string;
+    temperature?: number;
+    attachments?: { name: string; path: string }[];
+    continuation?: boolean;
+  },
   handlers: StreamHandlers,
 ): Promise<void> {
   const payload = (await isClientStorage()) ? { ...body, workspace: local.workspace(body.projectId) } : body;

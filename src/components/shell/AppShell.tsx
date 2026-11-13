@@ -34,17 +34,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar />
       </div>
 
-      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-bg/95 px-4 backdrop-blur-sm lg:hidden">
-        <a href="/chat" className="flex items-baseline gap-1.5">
-          <span className="font-mono text-[15px] lowercase tracking-tight text-ink">aomi</span>
-          <span className="size-1.5 rounded-full bg-accent" aria-hidden />
+      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-bg px-4 lg:hidden">
+        <a href="/chat" className="flex items-center gap-2">
+          <span className="grid size-7 place-items-center rounded-[9px] bg-accent text-[13px] font-semibold text-accent-ink">a</span>
+          <span className="text-[15px] font-semibold tracking-tight text-ink">aomi</span>
         </a>
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
           aria-label={open ? "Tutup menu" : "Buka menu"}
-          className="rounded-md border border-line p-2 text-muted transition-colors hover:text-ink"
+          className="rounded-lg border border-line p-2 text-muted transition-colors hover:text-ink"
         >
           {open ? <X className="size-4" /> : <Menu className="size-4" />}
         </button>
@@ -56,9 +56,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             type="button"
             aria-label="Tutup menu"
             onClick={() => setOpen(false)}
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-black/40"
           />
-          <div className="absolute inset-y-0 left-0 w-[248px] border-r border-line bg-panel">
+          <div className="absolute inset-y-0 left-0 w-[248px] border-r border-line bg-panel shadow-xl">
             <Sidebar onNavigate={() => setOpen(false)} />
           </div>
         </div>
