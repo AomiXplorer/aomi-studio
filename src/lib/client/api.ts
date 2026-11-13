@@ -359,17 +359,23 @@ export async function streamChat(
     return false;
   };
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let boundary = buffer.indexOf("\n\n");
-    while (boundary !== -1) {
-      const frame = buffer.slice(0, boundary);
-      buffer = buffer.slice(boundary + 2);
-      boundary = buffer.indexOf("\n\n");
-      if (handleFrame(frame)) return;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let boundary = buffer.indexOf("\n\n");
+      while (boundary !== -1) {
+        const frame = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        boundary = buffer.indexOf("\n\n");
+        if (handleFrame(frame)) return;
+      }
     }
+    handlers.onDone?.();
+  } finally {
+    // Aborts and thrown handlers leave the socket open otherwise, pinning the
+    // response body (and its snapshot) in memory for the life of the tab.
+    void reader.cancel().catch(() => undefined);
   }
-  handlers.onDone?.();
 }

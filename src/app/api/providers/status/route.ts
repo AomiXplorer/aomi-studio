@@ -2,6 +2,7 @@ import { aiConfig, providerKeyConfigured } from "@/lib/ai/config";
 import { checkConnection, listModels, listVoices } from "@/lib/ai/bangunweb";
 import { clientStorageMode, storageStatus } from "@/lib/workspace/store";
 import { json } from "@/lib/api";
+import { requireSession } from "@/lib/auth/require";
 
 export const runtime = "nodejs";
 
@@ -11,6 +12,9 @@ export const runtime = "nodejs";
  * the provider's own message.
  */
 export async function GET(request: Request) {
+  const gate = await requireSession();
+  if (gate.error) return gate.error;
+
   const force = new URL(request.url).searchParams.get("refresh") === "1";
   const storage = storageStatus();
 

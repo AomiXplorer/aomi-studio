@@ -4,6 +4,7 @@ import { aiConfig, providerKeyConfigured } from "@/lib/ai/config";
 import { getProject, newId, saveAsset } from "@/lib/workspace/service";
 import { clientKey, rateLimit } from "@/lib/services/rate-limit";
 import { errorResponse, json, parseBody, serverError } from "@/lib/api";
+import { requireSession } from "@/lib/auth/require";
 
 export const runtime = "nodejs";
 // Vercel rejects values above 60 for this plan tier (verified by deploy), so the
@@ -19,6 +20,9 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  const gate = await requireSession();
+  if (gate.error) return gate.error;
+
   if (!providerKeyConfigured()) return errorResponse("BANGUNWEB_API_KEY belum diatur.", 500, { code: "not_configured" });
   const limit = rateLimit(clientKey(request, "image"), Math.max(3, Math.floor(aiConfig.rateLimitPerMin / 4)));
   if (!limit.ok) return errorResponse("Terlalu banyak permintaan gambar. Coba lagi sebentar.", 429, { retryAfter: limit.retryAfter });

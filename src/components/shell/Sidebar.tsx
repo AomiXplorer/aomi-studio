@@ -8,6 +8,7 @@ import { api } from "@/lib/client/api";
 import type { ProjectMeta } from "@/lib/workspace/service";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
+import { AccountMenu } from "@/components/auth/AccountMenu";
 
 const NAV = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
@@ -100,6 +101,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <div className="border-t border-line p-2.5">
+        <AccountMenu onNavigate={onNavigate} className="mb-1" />
         <ThemeToggle className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-muted transition-colors hover:bg-surface hover:text-ink" />
         <Link
           href="/settings"

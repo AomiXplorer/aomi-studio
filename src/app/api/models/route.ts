@@ -1,10 +1,14 @@
 import { listModels } from "@/lib/ai/bangunweb";
 import { providerKeyConfigured, aiConfig } from "@/lib/ai/config";
 import { json, serverError } from "@/lib/api";
+import { requireSession } from "@/lib/auth/require";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
+  const gate = await requireSession();
+  if (gate.error) return gate.error;
+
   const url = new URL(request.url);
   const force = url.searchParams.get("refresh") === "1";
   if (!providerKeyConfigured()) {

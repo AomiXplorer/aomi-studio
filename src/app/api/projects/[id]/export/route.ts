@@ -3,6 +3,7 @@ import { buildProjectZip } from "@/lib/services/export";
 import { prepareSession } from "@/lib/workspace/session";
 import { runWithStore } from "@/lib/workspace/store";
 import { errorResponse, parseBody, serverError } from "@/lib/api";
+import { requireSession } from "@/lib/auth/require";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -23,6 +24,9 @@ function zipResponse(zip: Awaited<ReturnType<typeof buildProjectZip>>) {
 
 /** Streams a freshly built ZIP. Nothing is cached on disk. */
 export async function GET(_request: Request, { params }: Params) {
+  const gate = await requireSession();
+  if (gate.error) return gate.error;
+
   const { id } = await params;
   try {
     return zipResponse(await buildProjectZip(id));
@@ -58,6 +62,9 @@ const schema = z.object({
  * then downloads exactly what the workspace holds.
  */
 export async function POST(request: Request, { params }: Params) {
+  const gate = await requireSession();
+  if (gate.error) return gate.error;
+
   const { id } = await params;
   const parsed = await parseBody(request, schema);
   if (parsed.error) return parsed.error;

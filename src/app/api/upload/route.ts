@@ -1,12 +1,16 @@
 import { writeProjectFile, getProject, listProjectFiles } from "@/lib/workspace/service";
 import { MAX_FILE_BYTES } from "@/lib/workspace/paths";
 import { errorResponse, json, serverError } from "@/lib/api";
+import { requireSession } from "@/lib/auth/require";
 
 export const runtime = "nodejs";
 
 const ALLOWED = [/^image\/(png|jpeg|webp|gif|svg\+xml)$/, /^text\//, /^application\/(json|pdf|zip)$/];
 
 export async function POST(request: Request) {
+  const gate = await requireSession();
+  if (gate.error) return gate.error;
+
   try {
     const form = await request.formData();
     const projectId = String(form.get("projectId") || "");

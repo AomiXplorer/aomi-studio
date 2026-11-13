@@ -2,12 +2,16 @@ import { z } from "zod";
 import { deleteProject, getProject, touchProject } from "@/lib/workspace/service";
 import { storageStatus } from "@/lib/workspace/store";
 import { errorResponse, json, parseBody, serverError } from "@/lib/api";
+import { requireSession } from "@/lib/auth/require";
 
 export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
+  const gate = await requireSession();
+  if (gate.error) return gate.error;
+
   const { id } = await params;
   try {
     const project = await getProject(id);
@@ -26,6 +30,9 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(request: Request, { params }: Params) {
+  const gate = await requireSession();
+  if (gate.error) return gate.error;
+
   const { id } = await params;
   const parsed = await parseBody(request, patchSchema);
   if (parsed.error) return parsed.error;
@@ -38,6 +45,9 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
+  const gate = await requireSession();
+  if (gate.error) return gate.error;
+
   const { id } = await params;
   try {
     await deleteProject(id);

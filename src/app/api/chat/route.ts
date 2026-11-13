@@ -15,6 +15,7 @@ import { runWithStore } from "@/lib/workspace/store";
 import { prepareSession, snapshotSession, type Session } from "@/lib/workspace/session";
 import { clientKey, rateLimit } from "@/lib/services/rate-limit";
 import { errorResponse, parseBody, serverError } from "@/lib/api";
+import { requireSession } from "@/lib/auth/require";
 
 export const runtime = "nodejs";
 // Vercel rejects values above 60 for this plan tier (verified by deploy), so the
@@ -65,6 +66,9 @@ function toHistory(messages: StoredMessage[]): ChatMessage[] {
 }
 
 export async function POST(request: Request) {
+  const gate = await requireSession();
+  if (gate.error) return gate.error;
+
   if (!providerKeyConfigured()) {
     return errorResponse("BANGUNWEB_API_KEY belum diatur di environment server.", 500, { code: "not_configured" });
   }

@@ -3,10 +3,14 @@ import { createProject, listProjects } from "@/lib/workspace/service";
 import { scaffold, TEMPLATES, type TemplateId } from "@/lib/workspace/templates";
 import { aiConfig } from "@/lib/ai/config";
 import { json, parseBody, serverError } from "@/lib/api";
+import { requireSession } from "@/lib/auth/require";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  const gate = await requireSession();
+  if (gate.error) return gate.error;
+
   try {
     return json({ projects: await listProjects(), templates: TEMPLATES });
   } catch (error) {
@@ -24,6 +28,9 @@ const createSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const gate = await requireSession();
+  if (gate.error) return gate.error;
+
   const parsed = await parseBody(request, createSchema);
   if (parsed.error) return parsed.error;
   try {

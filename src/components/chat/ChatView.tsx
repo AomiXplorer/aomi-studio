@@ -282,6 +282,14 @@ export function ChatView() {
     setStreaming(false);
   };
 
+  // Navigating away mid-turn must not leave the stream and its callbacks alive.
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+    };
+  }, []);
+
   const attach = async (file: File) => {
     if (!activeProject) {
       setShowNew(true);
