@@ -22,7 +22,6 @@ export function Composer({
   placeholder,
   uploading,
   modelSlot,
-  hint,
 }: {
   onSend: (message: string) => void;
   onStop: () => void;
@@ -34,7 +33,6 @@ export function Composer({
   placeholder?: string;
   uploading?: boolean;
   modelSlot?: React.ReactNode;
-  hint?: string | null;
 }) {
   const [value, setValue] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -48,7 +46,7 @@ export function Composer({
   };
 
   return (
-    <div className="bg-gradient-to-t from-bg via-bg px-3 pb-4 pt-2 sm:px-6">
+    <div className="bg-gradient-to-t from-bg via-bg px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-6 sm:pb-6">
       <div className="mx-auto w-full max-w-[760px]">
         <div
           className={cn(
@@ -111,7 +109,6 @@ export function Composer({
             >
               {uploading ? <Spinner className="size-3.5" /> : <Plus className="size-4" />}
             </button>
-            {hint ? <span className="ml-1 hidden truncate text-[11.5px] text-faint md:inline">{hint}</span> : null}
 
             <div className="ml-auto flex items-center gap-1.5">
               {modelSlot}
@@ -143,10 +140,6 @@ export function Composer({
             </div>
           </div>
         </div>
-
-        <p className="mt-2 text-center text-[11px] text-faint">
-          Enter mengirim · Shift+Enter baris baru. Aomi menulis file sungguhan di workspace project.
-        </p>
       </div>
     </div>
   );

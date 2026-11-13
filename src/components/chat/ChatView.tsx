@@ -20,6 +20,7 @@ import { Markdown } from "./Markdown";
 import { ToolTimeline, type ToolEntry } from "./ToolTimeline";
 import { StatusRail } from "./StatusRail";
 import { Composer, type PendingAttachment } from "./Composer";
+import { ModelPicker } from "./ModelPicker";
 import { api, streamChat } from "@/lib/client/api";
 import { downloadProjectZip } from "@/lib/client/download";
 import type { AgentEvent, AgentStatus } from "@/lib/agent/engine";
@@ -471,25 +472,15 @@ export function ChatView() {
       </div>
 
       <Composer
-        hint={activeProject ? `${activeProject.name} · ${changes.length ? `${changes.length} file berubah` : "siap menulis"}` : null}
         modelSlot={
-          <Select
-            aria-label="Pilih model"
+          <ModelPicker
+            models={textModels}
             value={model}
-            onChange={(event) => {
-              setModel(event.target.value);
-              window.localStorage.setItem("aomi:model", event.target.value);
+            onChange={(id) => {
+              setModel(id);
+              window.localStorage.setItem("aomi:model", id);
             }}
-            className="h-8 max-w-[168px] border-transparent bg-transparent pr-7 text-[12px] text-muted hover:border-line"
-          >
-            {textModels.length === 0 ? <option value="">Model belum tersedia</option> : null}
-            {textModels.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-                {item.tier ? ` · ${item.tier}` : ""}
-              </option>
-            ))}
-          </Select>
+          />
         }
         onSend={(text) => void send(text)}
         onStop={stop}
