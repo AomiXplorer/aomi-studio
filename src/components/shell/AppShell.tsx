@@ -69,7 +69,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ) : null}
 
       <main id="main" className="min-w-0 flex-1 pt-14 lg:pt-0">
-        {children}
+        {/* Keyed by route so each page arrives with a short fade instead of a hard swap. */}
+        <div key={pathname} className="aomi-page h-full">
+          {children}
+        </div>
       </main>
     </div>
   );

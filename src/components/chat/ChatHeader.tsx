@@ -134,9 +134,9 @@ export function ChatHeader({
               <FolderOpen className="size-3.5" aria-hidden />
               <span className="hidden sm:inline">Workspace</span>
             </Link>
-            <button type="button" onClick={onZip} className={action} aria-label="Unduh project sebagai ZIP">
+            <button type="button" onClick={onZip} className={action} aria-label="Download project">
               <Download className="size-3.5" aria-hidden />
-              <span className="hidden sm:inline">ZIP</span>
+              <span className="hidden sm:inline">Download</span>
             </button>
             <div className="relative" ref={confirmRef}>
               <button

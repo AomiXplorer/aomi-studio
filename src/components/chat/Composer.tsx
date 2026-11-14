@@ -56,7 +56,7 @@ export function Composer({
       <div className="mx-auto w-full max-w-[720px]">
         <div
           className={cn(
-            "rounded-[20px] border border-line bg-raised/75 shadow-[var(--composer-shadow)] backdrop-blur-xl transition-colors duration-150 focus-within:border-line-strong",
+            "aomi-composer-shell rounded-[20px] border border-line bg-raised/75 shadow-[var(--composer-shadow)] backdrop-blur-xl",
             disabled && "opacity-70",
           )}
         >
@@ -97,7 +97,7 @@ export function Composer({
               }
             }}
             rows={1}
-            placeholder={placeholder || "Tanya apa saja, atau minta Aomi membangun sesuatu..."}
+            placeholder={placeholder || "Mau bikin apa bareng Aomi?"}
             disabled={disabled}
             className="max-h-[38vh] w-full resize-none bg-transparent px-3.5 pb-1 pt-3 text-[14px] leading-[1.55] text-ink placeholder:text-faint focus:outline-none"
           />

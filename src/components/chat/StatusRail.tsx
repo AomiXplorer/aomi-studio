@@ -4,14 +4,14 @@ import { cn } from "@/lib/utils";
 import type { AgentStatus } from "@/lib/agent/engine";
 
 const LABELS: Record<AgentStatus, string> = {
-  thinking: "Thinking",
-  planning: "Planning",
-  writing: "Creating files",
-  editing: "Editing code",
-  checking: "Checking project",
+  thinking: "Lagi mikir",
+  planning: "Nyusun rencana",
+  writing: "Nulis file",
+  editing: "Ngedit kode",
+  checking: "Ngecek project",
   building: "Building",
-  completed: "Completed",
-  failed: "Failed",
+  completed: "Selesai",
+  failed: "Gagal",
 };
 
 const ORDER: AgentStatus[] = ["thinking", "planning", "writing", "checking", "completed"];
@@ -24,14 +24,11 @@ export function StatusRail({ status, detail }: { status: AgentStatus | null; det
   return (
     <div className="flex flex-wrap items-center gap-2 px-4 py-2 text-[11.5px]">
       <span className={cn("flex items-center gap-1.5 font-medium", failed ? "text-danger" : status === "completed" ? "text-ok" : "text-accent")}>
-        <span
-          className={cn(
-            "size-1.5 rounded-full",
-            failed ? "bg-danger" : status === "completed" ? "bg-ok" : "bg-accent",
-            !failed && status !== "completed" && "animate-pulse",
-          )}
-          aria-hidden
-        />
+        {failed || status === "completed" ? (
+          <span className={cn("size-1.5 rounded-full", failed ? "bg-danger" : "bg-ok")} aria-hidden />
+        ) : (
+          <span className={cn("aomi-pulse", failed ? "bg-danger" : "bg-accent")} aria-hidden />
+        )}
         {LABELS[status]}
       </span>
       {detail ? <span className="truncate font-mono text-[11px] text-faint">{detail}</span> : null}

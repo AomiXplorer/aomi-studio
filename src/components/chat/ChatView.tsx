@@ -14,6 +14,7 @@ import { Composer, type PendingAttachment } from "./Composer";
 import { ChatHeader } from "./ChatHeader";
 import { EmptyState } from "./EmptyState";
 import { Maintenance } from "./Maintenance";
+import { Thinking } from "./Thinking";
 import { ModelPicker } from "./ModelPicker";
 import { api, streamChat } from "@/lib/client/api";
 import { downloadProjectZip } from "@/lib/client/download";
@@ -401,9 +402,7 @@ export function ChatView() {
           {quotaOut ? <Maintenance note={quotaNote ?? undefined} /> : null}
 
           {loading ? (
-            <div className="flex items-center gap-2 text-[13px] text-muted">
-              <Spinner /> Memuat workspace...
-            </div>
+            <Thinking label="Sebentar, lagi buka workspace..." />
           ) : messages.length === 0 ? (
             <EmptyState projectName={activeProject?.name} onPick={(prompt) => void send(prompt)} />
           ) : (
@@ -433,9 +432,7 @@ export function ChatView() {
                       {message.content ? <Markdown content={message.content} /> : null}
                       {message.tools?.length ? <ToolTimeline tools={message.tools} /> : null}
                       {message.streaming && !message.content && !message.tools?.length ? (
-                        <p className="flex items-center gap-2 text-[13px] text-muted">
-                          <Spinner /> Menyiapkan langkah pertama...
-                        </p>
+                        <Thinking label="Aomi lagi nyiapin langkah pertama..." />
                       ) : null}
                       {message.streaming && message.content ? <span className="aomi-caret" aria-hidden /> : null}
                     </div>
@@ -487,8 +484,8 @@ export function ChatView() {
           quotaOut
             ? "Web Under maintenance."
             : activeProject
-              ? `Minta Aomi mengerjakan sesuatu di "${activeProject.name}"...`
-              : "Buat project dulu untuk mulai..."
+              ? `Mau bikin apa bareng Aomi di "${activeProject.name}"?`
+              : "Bikin project dulu, lalu kita mulai bareng Aomi."
         }
       />
 
