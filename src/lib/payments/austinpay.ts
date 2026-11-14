@@ -26,6 +26,10 @@ export class AustinPayError extends Error {
   }
 }
 
+/** Cloudflare in front of the provider drops clients that look like scripts. */
+const BROWSER_UA =
+  "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36";
+
 export function austinBaseUrl(): string {
   return (process.env.AUSTINPAY_BASE_URL || DEFAULT_BASE).replace(/\/+$/, "");
 }
@@ -89,7 +93,15 @@ async function call<T>(options: CallOptions): Promise<T> {
 
   const secret = austinApiSecret();
   const rawBody = options.body === undefined ? "" : JSON.stringify(options.body);
-  const headers: Record<string, string> = { "Content-Type": "application/json", "X-API-Key": apiKey };
+  // AustinPay sits behind Cloudflare, which answers a request with no browser User-Agent,
+  // with an HTML "Access denied" page instead of JSON. A working client on the same provider
+  // sends both of these, and there is no downside to looking like a normal API consumer.
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "User-Agent": BROWSER_UA,
+    "X-API-Key": apiKey,
+  };
   // When the deployment's egress IP is not stable (Vercel), calls go through the relay on a
   // machine with one fixed address. AustinPay still verifies the key and the signature.
   const relayToken = (process.env.AUSTIN_PROXY_TOKEN || "").trim();

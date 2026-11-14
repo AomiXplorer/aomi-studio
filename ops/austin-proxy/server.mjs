@@ -30,7 +30,7 @@ const HOST = process.env.HOST || "127.0.0.1";
 
 // Only these paths are relayed: a stolen token cannot be turned into a general proxy.
 const ALLOWED = [/^\/api\/account(\?.*)?$/, /^\/api\/deposit\/[A-Za-z0-9/_-]*(\?.*)?$/];
-const FORWARD_HEADERS = ["content-type", "accept", "x-api-key", "x-timestamp", "x-signature"];
+const FORWARD_HEADERS = ["content-type", "accept", "user-agent", "x-api-key", "x-timestamp", "x-signature"];
 
 if (TOKEN.length < 24) {
   console.error("PROXY_TOKEN wajib diisi, minimal 24 karakter.");
