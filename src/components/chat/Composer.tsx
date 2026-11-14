@@ -11,6 +11,10 @@ export interface PendingAttachment {
   size: number;
 }
 
+/**
+ * The composer stays one calm row of controls: attach, model, send. It sits on the same
+ * 720px grid as the conversation so the text never jumps horizontally when you type.
+ */
 export function Composer({
   onSend,
   onStop,
@@ -45,22 +49,32 @@ export function Composer({
     setValue("");
   };
 
+  const round = "relative grid size-8 shrink-0 place-items-center rounded-full transition-colors duration-150 before:absolute before:-inset-1.5 before:content-['']";
+
   return (
-    <div className="bg-gradient-to-t from-bg via-bg px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-6 sm:pb-6">
-      <div className="mx-auto w-full max-w-[760px]">
+    <div className="shrink-0 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 sm:px-6 sm:pb-5">
+      <div className="mx-auto w-full max-w-[720px]">
         <div
           className={cn(
-            "aomi-composer rounded-[22px] border border-line bg-raised transition-colors focus-within:border-line-strong",
+            "rounded-[20px] border border-line bg-raised/75 shadow-[var(--composer-shadow)] backdrop-blur-xl transition-colors duration-150 focus-within:border-line-strong",
             disabled && "opacity-70",
           )}
         >
           {attachments.length ? (
-            <ul className="flex flex-wrap gap-1.5 px-3 pt-3">
+            <ul className="flex flex-wrap gap-1.5 px-2.5 pt-2.5">
               {attachments.map((file) => (
-                <li key={file.path} className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1 text-[11.5px] text-muted">
+                <li
+                  key={file.path}
+                  className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1 text-[11.5px] text-muted"
+                >
                   <span className="max-w-[160px] truncate font-mono text-[11px] text-ink-dim">{file.name}</span>
                   <span className="text-faint">{formatBytes(file.size)}</span>
-                  <button type="button" onClick={() => onRemoveAttachment(file.path)} aria-label={`Hapus ${file.name}`} className="text-faint hover:text-danger">
+                  <button
+                    type="button"
+                    onClick={() => onRemoveAttachment(file.path)}
+                    aria-label={`Hapus ${file.name}`}
+                    className="text-faint transition-colors hover:text-danger"
+                  >
                     <X className="size-3" />
                   </button>
                 </li>
@@ -85,10 +99,10 @@ export function Composer({
             rows={1}
             placeholder={placeholder || "Tanya apa saja, atau minta Aomi membangun sesuatu..."}
             disabled={disabled}
-            className="max-h-64 w-full resize-none bg-transparent px-4 pb-1 pt-3.5 text-[14px] leading-relaxed text-ink placeholder:text-faint focus:outline-none"
+            className="max-h-[38vh] w-full resize-none bg-transparent px-3.5 pb-1 pt-3 text-[14px] leading-[1.55] text-ink placeholder:text-faint focus:outline-none"
           />
 
-          <div className="flex items-center gap-1 px-2.5 pb-2.5">
+          <div className="flex items-center gap-2 px-2 pb-2">
             <input
               ref={fileRef}
               type="file"
@@ -105,22 +119,22 @@ export function Composer({
               disabled={disabled || uploading}
               aria-label="Lampirkan file"
               title="Lampirkan file"
-              className="grid size-8 place-items-center rounded-full border border-line text-muted transition-colors hover:border-line-strong hover:text-ink disabled:opacity-50"
+              className={cn(round, "border border-line text-muted hover:border-line-strong hover:text-ink disabled:opacity-50")}
             >
-              {uploading ? <Spinner className="size-3.5" /> : <Plus className="size-4" />}
+              {uploading ? <Spinner className="size-3.5" /> : <Plus className="size-4" aria-hidden />}
             </button>
 
-            <div className="ml-auto flex items-center gap-1.5">
-              {modelSlot}
+            <div className="ml-auto flex min-w-0 items-center gap-1.5">
+              <div className="min-w-0 overflow-hidden">{modelSlot}</div>
               {streaming ? (
                 <button
                   type="button"
                   onClick={onStop}
                   aria-label="Hentikan"
                   title="Hentikan"
-                  className="grid size-8 place-items-center rounded-full bg-surface text-ink transition-colors hover:bg-line"
+                  className={cn(round, "bg-surface text-ink hover:bg-line")}
                 >
-                  <Square className="size-3" />
+                  <Square className="size-3" aria-hidden />
                 </button>
               ) : (
                 <button
@@ -130,11 +144,11 @@ export function Composer({
                   aria-label="Kirim pesan"
                   title="Kirim"
                   className={cn(
-                    "grid size-8 place-items-center rounded-full transition-colors duration-150",
+                    round,
                     canSend ? "bg-accent text-accent-ink hover:bg-accent/90" : "bg-surface text-faint",
                   )}
                 >
-                  {disabled ? <Spinner className="size-3.5" /> : <ArrowUp className="size-4" />}
+                  {disabled ? <Spinner className="size-3.5" /> : <ArrowUp className="size-4" aria-hidden />}
                 </button>
               )}
             </div>

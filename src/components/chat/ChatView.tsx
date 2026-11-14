@@ -2,16 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  AlertCircle,
-  ArrowUpRight,
-  Download,
-  FileCode2,
-  FolderOpen,
-  Plus,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { AlertCircle, ArrowUpRight, FileCode2, X } from "lucide-react";
 import { Badge, Dot } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Field";
@@ -20,6 +11,8 @@ import { Markdown } from "./Markdown";
 import { ToolTimeline, type ToolEntry } from "./ToolTimeline";
 import { StatusRail } from "./StatusRail";
 import { Composer, type PendingAttachment } from "./Composer";
+import { ChatHeader } from "./ChatHeader";
+import { EmptyState } from "./EmptyState";
 import { ModelPicker } from "./ModelPicker";
 import { api, streamChat } from "@/lib/client/api";
 import { downloadProjectZip } from "@/lib/client/download";
@@ -39,13 +32,6 @@ interface UiMessage {
   usage?: { billedTokens: number } | null;
   attachments?: { name: string; path: string }[];
 }
-
-const EXAMPLES = [
-  "Buatkan website portfolio programmer dengan halaman project dan kontak.",
-  "Buatkan company profile statis untuk studio desain, gaya editorial.",
-  "Buatkan game visual novel sederhana bertema kehidupan sekolah.",
-  "Buatkan CLI TypeScript yang membaca CSV dan mencetak ringkasannya.",
-];
 
 export function ChatView() {
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
@@ -311,62 +297,17 @@ export function ChatView() {
 
   return (
     <div className="flex h-[calc(100dvh-3.5rem)] flex-col lg:h-dvh">
-      <header className="flex flex-wrap items-center gap-1.5 px-3 py-2 sm:px-5">
-        <div className="flex min-w-0 items-center gap-1">
-          <Select
-            aria-label="Pilih project"
-            value={activeId || ""}
-            onChange={(event) => {
-              const value = event.target.value;
-              if (value === "__new") {
-                setShowNew(true);
-                return;
-              }
-              if (value) void selectProject(value);
-            }}
-            className="h-8 w-[196px] border-transparent bg-transparent text-[13px] font-medium hover:border-line"
-          >
-            {projects.length === 0 ? <option value="">Belum ada project</option> : null}
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-            <option value="__new">+ Project baru</option>
-          </Select>
-          <button
-            type="button"
-            onClick={() => setShowNew(true)}
-            aria-label="Project baru"
-            title="Project baru"
-            className="grid size-8 place-items-center rounded-lg text-faint transition-colors hover:bg-surface hover:text-ink"
-          >
-            <Plus className="size-4" />
-          </button>
-        </div>
-
-        <div className="ml-auto flex items-center gap-0.5">
-          {activeProject ? (
-            <>
-              <Link
-                href={`/projects/${activeProject.id}`}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] text-muted transition-colors hover:bg-surface hover:text-ink"
-              >
-                <FolderOpen className="size-3.5" /> Workspace
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  downloadProjectZip(activeProject.id, activeProject.name).catch((error: Error) => setError(error.message));
-                }}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] text-muted transition-colors hover:bg-surface hover:text-ink"
-              >
-                <Download className="size-3.5" /> ZIP
-              </button>
-            </>
-          ) : null}
-        </div>
-      </header>
+      <ChatHeader
+        projects={projects}
+        activeId={activeId}
+        activeProject={activeProject}
+        onSelect={(id) => void selectProject(id)}
+        onNew={() => setShowNew(true)}
+        onZip={() => {
+          if (!activeProject) return;
+          downloadProjectZip(activeProject.id, activeProject.name).catch((error: Error) => setError(error.message));
+        }}
+      />
 
       {changes.length ? (
         <div className="flex flex-wrap items-center gap-1.5 px-3 pb-1 pt-0.5 sm:px-5">
@@ -387,37 +328,15 @@ export function ChatView() {
       ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-[760px] px-4 py-6 sm:px-6">
+        <div className="mx-auto w-full max-w-[720px] px-4 py-5 sm:px-6 sm:py-7">
           {loading ? (
             <div className="flex items-center gap-2 text-[13px] text-muted">
               <Spinner /> Memuat workspace...
             </div>
           ) : messages.length === 0 ? (
-            <div className="aomi-rise flex min-h-[56vh] flex-col items-center justify-center pb-6 text-center">
-              <span className="grid size-11 place-items-center rounded-2xl bg-accent/10 text-accent">
-                <Sparkles className="size-5" aria-hidden />
-              </span>
-              <h1 className="mt-4 text-[23px] font-semibold leading-tight tracking-tight text-ink sm:text-[26px]">
-                Mau dibangun apa hari ini?
-              </h1>
-              <p className="mt-2 max-w-[48ch] text-[13.5px] leading-relaxed text-muted">
-                Tulis satu kalimat. Aomi menyusun rencana, menulis file sungguhan di workspace project ini, dan hasilnya bisa kamu buka atau unduh sebagai ZIP.
-              </p>
-              <div className="mt-6 grid w-full max-w-[620px] gap-2 sm:grid-cols-2">
-                {EXAMPLES.map((example) => (
-                  <button
-                    key={example}
-                    type="button"
-                    onClick={() => void send(example)}
-                    className="rounded-xl border border-line bg-raised px-3.5 py-3 text-left text-[12.5px] leading-relaxed text-ink-dim transition-colors duration-150 hover:border-line-strong hover:bg-surface"
-                  >
-                    {example}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <EmptyState projectName={activeProject?.name} onPick={(prompt) => void send(prompt)} />
           ) : (
-            <ul className="space-y-7">
+            <ul className="space-y-6">
               {messages.map((message) => (
                 <li key={message.id}>
                   {message.role === "user" ? (
@@ -469,7 +388,7 @@ export function ChatView() {
       </div>
 
       <div className="pt-1">
-        <div className="mx-auto w-full max-w-[760px]">
+        <div className="mx-auto w-full max-w-[720px]">
           <StatusRail status={status} detail={statusDetail} />
         </div>
         {sessionBilled > 0 ? (
