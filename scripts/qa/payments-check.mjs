@@ -57,8 +57,9 @@ function cookiesFrom(response) {
 }
 
 async function mailInbox() {
-  const response = await fetch(`${MAIL}/messages`);
-  return response.json();
+  const response = await fetch(process.env.MAIL_INBOX_URL || `${MAIL}/messages`);
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data.messages || []);
 }
 
 async function austinState() {

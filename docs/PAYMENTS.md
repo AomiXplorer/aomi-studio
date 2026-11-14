@@ -190,3 +190,26 @@ BASE=http://127.0.0.1:3104 node scripts/qa/payments-check.mjs
 `payments-check.mjs` menjalankan 49 pemeriksaan lewat HTTP sungguhan: dua langkah checkout,
 validasi email/username, QRIS, token, signature webhook, idempotensi, akun + email, cancel,
 expired, batas akses owner, dan bukti bahwa password tidak tersimpan sebagai plaintext.
+
+## Email: two ways to deliver the password
+
+`sendMail()` picks a transport from the environment, so the checkout gate opens with either one.
+
+**1. SMTP** (needs five values)
+
+```
+SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+```
+
+Port 465 uses SSL, 587 uses STARTTLS. Some hosts block outbound SMTP ports entirely.
+
+**2. Brevo HTTPS API** (needs two values, port 443, immune to SMTP port blocks)
+
+```
+BREVO_API_KEY=xkeysib-...        # app.brevo.com -> SMTP & API -> API Keys
+SMTP_FROM=Aomi <sender@example.com>
+```
+
+The sender address must be verified in Brevo (Senders, IPs & Domains) and be on the same
+account as the key. When `BREVO_API_KEY` is present it wins over the SMTP variables.
+`BREVO_API_URL` exists only so the test suite can point the client at a local mock.
