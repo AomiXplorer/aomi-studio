@@ -19,6 +19,7 @@
  */
 import { createServer } from "node:http";
 import { request as httpsRequest } from "node:https";
+import { request as httpRequest } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 import { URL } from "node:url";
 
@@ -75,11 +76,12 @@ const server = createServer((incoming, outgoing) => {
     if (body.length) headers["content-length"] = String(body.length);
 
     const target = new URL(BASE + path);
-    const upstream = httpsRequest(
+    const send = target.protocol === "http:" ? httpRequest : httpsRequest;
+    const upstream = send(
       {
         method: incoming.method,
         hostname: target.hostname,
-        port: target.port || 443,
+        port: target.port || (target.protocol === "http:" ? 80 : 443),
         path: `${target.pathname}${target.search}`,
         headers,
         timeout: 25_000,

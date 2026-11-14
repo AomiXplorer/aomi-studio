@@ -85,6 +85,7 @@ createServer((request, response) => {
 
     const authError = verify(request, path, raw);
     if (authError) {
+      console.log(`reject ${request.method} ${path}: ${authError} (body ${raw.length} bytes)`);
       json(response, 401, { success: false, message: authError });
       return;
     }
