@@ -8,11 +8,13 @@
 import { audit } from "@/lib/db/audit";
 
 export function adminIds(): string[] {
-  const configured = (process.env.TELEGRAM_ADMIN_ID || "7666447095")
+  // No fallback in code: an unset allowlist denies everyone rather than shipping an id.
+  const raw = (process.env.TELEGRAM_ADMIN_ID || "").trim();
+  if (!raw) return [];
+  return raw
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
-  return configured.length > 0 ? configured : ["7666447095"];
 }
 
 export function isTelegramAdmin(userId: number | string | undefined): boolean {
