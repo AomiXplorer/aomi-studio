@@ -34,6 +34,22 @@ export function ProjectsView() {
     })();
   }, []);
 
+  useEffect(() => {
+    const onDeleted = (event: Event) => {
+      const id = (event as CustomEvent<{ projectId?: string }>).detail?.projectId;
+      if (id) setProjects((current) => current.filter((project) => project.id !== id));
+    };
+    const onCreated = () => {
+      void api.projects.list().then(({ projects: list }) => setProjects(list));
+    };
+    window.addEventListener("aomi:project-deleted", onDeleted);
+    window.addEventListener("aomi:project-created", onCreated);
+    return () => {
+      window.removeEventListener("aomi:project-deleted", onDeleted);
+      window.removeEventListener("aomi:project-created", onCreated);
+    };
+  }, []);
+
   const create = async () => {
     if (!name.trim()) return;
     setCreating(true);

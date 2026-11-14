@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { AudioLines, FolderCode, Image as ImageIcon, MessageSquare, Plus, Settings2, ShieldCheck } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { AlertCircle, AudioLines, FolderCode, Image as ImageIcon, MessageSquare, Plus, Settings2, ShieldCheck, Trash2, X } from "lucide-react";
 import { api } from "@/lib/client/api";
 import type { ProjectMeta } from "@/lib/workspace/service";
 import { cn } from "@/lib/utils";
@@ -19,8 +19,12 @@ const NAV = [
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [target, setTarget] = useState<ProjectMeta | null>(null);
+  const [busy, setBusy] = useState<"chat" | "project" | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -47,6 +51,65 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   useEffect(() => {
     void refresh();
   }, [refresh, pathname]);
+
+  // A project created or deleted anywhere in the app shows up here immediately.
+  useEffect(() => {
+    const onChange = () => void refresh();
+    window.addEventListener("aomi:project-created", onChange);
+    window.addEventListener("aomi:project-deleted", onChange);
+    return () => {
+      window.removeEventListener("aomi:project-created", onChange);
+      window.removeEventListener("aomi:project-deleted", onChange);
+    };
+  }, [refresh]);
+
+  useEffect(() => {
+    if (!target) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busy) setTarget(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [target, busy]);
+
+  const forgetIfActive = (id: string) => {
+    if (window.localStorage.getItem("aomi:project") === id) window.localStorage.removeItem("aomi:project");
+  };
+
+  const clearChat = async () => {
+    if (!target) return;
+    setBusy("chat");
+    setError(null);
+    try {
+      await api.messages.remove(target.id);
+      window.dispatchEvent(new CustomEvent("aomi:history-cleared", { detail: { projectId: target.id } }));
+      setTarget(null);
+    } catch (clearError) {
+      setError((clearError as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const removeProject = async () => {
+    if (!target) return;
+    const id = target.id;
+    setBusy("project");
+    setError(null);
+    try {
+      await api.projects.remove(id);
+      forgetIfActive(id);
+      window.dispatchEvent(new CustomEvent("aomi:project-deleted", { detail: { projectId: id } }));
+      setTarget(null);
+      await refresh();
+      if (pathname.startsWith(`/projects/${id}`)) router.push("/chat");
+      else router.refresh();
+    } catch (removeError) {
+      setError((removeError as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
     <aside className="flex h-full min-h-dvh w-[248px] shrink-0 flex-col border-r border-line bg-panel">
@@ -96,17 +159,29 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             {projects.map((project) => {
               const active = pathname === `/projects/${project.id}`;
               return (
-                <li key={project.id}>
+                <li key={project.id} className="group/item flex items-center gap-0.5">
                   <Link
                     href={`/projects/${project.id}`}
                     onClick={onNavigate}
                     className={cn(
-                      "block truncate rounded-lg px-2.5 py-1.5 text-[12.5px] transition-colors",
-                      active ? "bg-surface text-ink" : "text-muted hover:bg-surface/70 hover:text-ink",
+                      "min-w-0 flex-1 truncate rounded-lg px-2.5 py-1.5 text-[12.5px] transition-colors",
+                      active ? "bg-surface text-ink" : "text-muted group-hover/item:bg-surface/70 group-hover/item:text-ink",
                     )}
                   >
                     {project.name}
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setTarget(project);
+                    }}
+                    aria-label={`Hapus project ${project.name}`}
+                    title="Hapus"
+                    className="grid size-6 shrink-0 place-items-center rounded-md text-faint opacity-60 transition-colors duration-150 hover:bg-surface hover:text-danger focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 sm:opacity-0 sm:group-hover/item:opacity-100"
+                  >
+                    <Trash2 className="size-3.5" aria-hidden />
+                  </button>
                 </li>
               );
             })}
@@ -130,6 +205,81 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <span className="truncate">Settings</span>
         </Link>
       </div>
+
+      {target ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center">
+          <button
+            type="button"
+            aria-label="Tutup"
+            onClick={() => (busy ? undefined : setTarget(null))}
+            className="absolute inset-0 bg-black/60"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Hapus ${target.name}`}
+            className="relative w-full max-w-sm rounded-xl border border-line bg-panel p-4 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="truncate text-[14px] font-medium text-ink">Hapus “{target.name}”</h2>
+                <p className="mt-1 text-[12px] leading-relaxed text-muted">Pilih apa yang dihapus. Tidak bisa dibatalkan.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTarget(null)}
+                aria-label="Tutup"
+                className="grid size-7 shrink-0 place-items-center rounded-md text-faint transition-colors hover:bg-surface hover:text-ink"
+              >
+                <X className="size-3.5" aria-hidden />
+              </button>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => void clearChat()}
+                disabled={boxedBusy(busy)}
+                className="rounded-lg border border-line px-3 py-2 text-left transition-colors hover:border-line-strong hover:bg-surface disabled:opacity-50"
+              >
+                <span className="block text-[12.5px] font-medium text-ink">
+                  {busy === "chat" ? "Menghapus riwayat..." : "Hapus riwayat chat saja"}
+                </span>
+                <span className="mt-0.5 block text-[11.5px] text-muted">Pesan hilang, file dan project tetap ada.</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void removeProject()}
+                disabled={boxedBusy(busy)}
+                className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-left transition-colors hover:bg-danger/15 disabled:opacity-50"
+              >
+                <span className="block text-[12.5px] font-medium text-danger">
+                  {busy === "project" ? "Menghapus project..." : "Hapus project"}
+                </span>
+                <span className="mt-0.5 block text-[11.5px] text-muted">Project, file, dan riwayat chat ikut hilang.</span>
+              </button>
+            </div>
+
+            {error ? (
+              <p className="mt-2 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-danger">
+                <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                {error}
+              </p>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => setTarget(null)}
+              disabled={boxedBusy(busy)}
+              className="mt-2 h-8 w-full rounded-lg text-[12.5px] text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      ) : null}
     </aside>
   );
 }
+
+const boxedBusy = (busy: "chat" | "project" | null) => busy !== null;

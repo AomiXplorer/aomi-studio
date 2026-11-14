@@ -38,20 +38,6 @@ export async function buildProjectZip(projectId: string): Promise<ZipResult> {
     fileCount += 1;
   }
 
-  zip.file(
-    "AOMI-PROJECT.md",
-    [
-      `# ${project.name}`,
-      "",
-      `Exported by Aomi on ${new Date().toISOString()}`,
-      `Stack: ${project.stack}`,
-      `Files: ${fileCount}`,
-      "",
-      "Unzip this archive, then run the install command declared in package.json (if any).",
-      "",
-    ].join("\n"),
-  );
-
   const buffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 6 } });
   const slug = project.name
     .toLowerCase()

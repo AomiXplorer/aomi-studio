@@ -86,6 +86,39 @@ export function ChatView() {
     );
   }, []);
 
+  useEffect(() => {
+    const onCleared = (event: Event) => {
+      const id = (event as CustomEvent<{ projectId?: string }>).detail?.projectId;
+      if (id && id === activeId) {
+        setMessages([]);
+        setChanges([]);
+      }
+    };
+    const onDeleted = (event: Event) => {
+      const id = (event as CustomEvent<{ projectId?: string }>).detail?.projectId;
+      if (!id) return;
+      void api.projects.list().then(({ projects: list }) => {
+        setProjects(list);
+        if (id !== activeId) return;
+        setMessages([]);
+        setChanges([]);
+        const next = list[0];
+        setActiveId(next ? next.id : null);
+        window.localStorage.removeItem("aomi:project");
+        if (next) {
+          window.localStorage.setItem("aomi:project", next.id);
+          void loadMessages(next.id);
+        }
+      });
+    };
+    window.addEventListener("aomi:history-cleared", onCleared);
+    window.addEventListener("aomi:project-deleted", onDeleted);
+    return () => {
+      window.removeEventListener("aomi:history-cleared", onCleared);
+      window.removeEventListener("aomi:project-deleted", onDeleted);
+    };
+  }, [activeId, loadMessages]);
+
   const selectProject = useCallback(
     async (projectId: string) => {
       setActiveId(projectId);
@@ -152,6 +185,7 @@ export function ChatView() {
       setProjects((current) => [project, ...current]);
       setShowNew(false);
       setNewName("");
+      window.dispatchEvent(new CustomEvent("aomi:project-created", { detail: { projectId: project.id } }));
       await selectProject(project.id);
     } catch (createError) {
       setError((createError as Error).message);
