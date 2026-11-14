@@ -20,4 +20,5 @@ export const K = {
   boot: "aomi:boot",
 } as const;
 
-export const PANEL_URL = "https://aomi-studio.vercel.app";
+/** The public origin, so a domain change is an env change and never a code change. */
+export const PANEL_URL = (process.env.AOMI_PUBLIC_URL || "https://vierraapi.my.id").replace(/\/+$/, "");

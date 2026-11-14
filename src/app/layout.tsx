@@ -16,11 +16,40 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
+const siteUrl = (process.env.AOMI_PUBLIC_URL || "https://vierraapi.my.id").replace(/\/+$/, "");
+const shareTitle = "Aomi Studio — AI agent × Astra";
+const shareDescription =
+  "Tulis permintaan, agent menulis file, menjalankan perintah, dan menyerahkan project yang bisa diunduh.";
+
 export const metadata: Metadata = {
   title: "Aomi — AI Coding Agent",
-  description: "Aomi understands a request, plans it, writes the files and hands you a working project.",
-  // The app is private: nothing here belongs in a search index.
+  description: shareDescription,
+  metadataBase: new URL(siteUrl),
+  // The app is private: nothing here belongs in a search index. Link previews still work.
   robots: { index: false, follow: false, nocache: true },
+  openGraph: {
+    type: "website",
+    url: siteUrl,
+    siteName: "Aomi Studio",
+    locale: "id_ID",
+    title: shareTitle,
+    description: shareDescription,
+    images: [
+      {
+        url: `${siteUrl}/og-banner.jpg`,
+        width: 1200,
+        height: 630,
+        alt: "Aomi Studio — AI agent × Astra",
+        type: "image/jpeg",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: shareTitle,
+    description: shareDescription,
+    images: [`${siteUrl}/og-banner.jpg`],
+  },
 };
 
 export const viewport: Viewport = {

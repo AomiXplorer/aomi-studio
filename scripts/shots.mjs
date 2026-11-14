@@ -1,7 +1,7 @@
 // Captures real screenshots of the live app: an actual agent run, not mock data.
 import puppeteer from "puppeteer-core";
 
-const BASE = process.argv[2] || "https://aomi-studio.vercel.app";
+const BASE = process.argv[2] || "https://vierraapi.my.id";
 const OUT = process.argv[3] || "ui-shots/new";
 // The composer re-mounts right after a project is created, so typing needs a
 // settle wait and a verification pass instead of a single blind type().

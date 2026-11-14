@@ -10,6 +10,7 @@ import { adminCount, createUserWithHash, getUserById, getUserByUsername, listUse
 import { addSealedApiKey, decryptKey, deleteApiKey, getApiKey, listApiKeys, recordKeyCheck, setActiveKey, toggleApiKey } from "@/lib/db/apikeys";
 import { createBackup, listBackupFiles } from "@/lib/db/backup";
 import { audit } from "@/lib/db/audit";
+import { PANEL_URL } from "@/lib/db/keys";
 import { purgeUserProjects } from "@/lib/db/projects";
 import { hashPasswordForFlow, usernameProblem as usernameProblemFn } from "./validate";
 import { sealSecret, maskSecret, fingerprint } from "@/lib/crypto/secrets";
@@ -548,7 +549,7 @@ async function finalizeFlow(chatId: ChatId, flow: Flow): Promise<void> {
         `role      ${created.user.role}`,
         `id        <code>${esc(created.user.id)}</code>`,
         RULE,
-        "The user can sign in at aomi-studio.vercel.app right now.",
+        `The user can sign in at ${PANEL_URL.replace(/^https?:\/\//, "")} right now.`,
       ]),
       fresh ? S.userKeyboard(fresh) : S.mainMenu(),
     );

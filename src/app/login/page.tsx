@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { LiveClock } from "@/components/auth/LiveClock";
 import { loadAuthConfig, ownerWhatsApp } from "@/lib/auth/config";
@@ -20,7 +21,18 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const tools = toolNames();
 
   return (
-    <main lang="en" className="flex min-h-dvh flex-col bg-[#09090b] text-[#fafafa]">
+    <main lang="en" className="relative flex min-h-dvh flex-col overflow-hidden bg-[#09090b] text-[#fafafa]">
+      {/* Astra, kept as a quiet ground so the form stays the loudest thing on screen. */}
+      <Image
+        src="/astra.webp"
+        alt=""
+        aria-hidden
+        width={736}
+        height={563}
+        priority
+        className="pointer-events-none absolute -right-16 -top-16 hidden h-[62vh] w-auto select-none opacity-[0.16] [mask-image:linear-gradient(to_bottom_left,black,transparent_72%)] lg:block"
+      />
+
       <header className="sh-enter flex items-center justify-between border-b border-[#1c1c20] px-5 py-4 sm:px-8">
         <div className="flex items-center gap-3">
           <span
@@ -79,6 +91,25 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </section>
 
         <aside className="hidden min-h-0 overflow-hidden border-l border-[#1c1c20] lg:flex lg:flex-col" aria-label="Tools the agent can call">
+          <div className="relative h-[176px] shrink-0 border-b border-[#1c1c20]">
+            <Image
+              src="/astra.webp"
+              alt="Astra, the character Aomi is named alongside"
+              width={736}
+              height={563}
+              priority
+              sizes="300px"
+              className="h-full w-full select-none object-cover object-top opacity-85 grayscale"
+            />
+            <span
+              aria-hidden
+              className="absolute inset-x-0 bottom-0 h-16 bg-[linear-gradient(to_top,#09090b_10%,rgba(9,9,11,0))]"
+            />
+            <p className="absolute bottom-3 left-5 font-mono text-[10px] uppercase tracking-[0.24em] text-[#e4e4e7]">
+              astra
+            </p>
+          </div>
+
           <div className="flex items-center justify-between border-b border-[#1c1c20] px-5 py-4">
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#8b8b96]">agent tools</p>
             <span className="font-mono text-[10px] text-[#8b8b96]">{tools.length}</span>

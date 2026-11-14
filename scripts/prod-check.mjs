@@ -6,7 +6,7 @@ const env = Object.fromEntries(
     .split("\n").filter((l) => l.includes("=") && !l.startsWith("#"))
     .map((l) => { const i = l.indexOf("="); return [l.slice(0, i), l.slice(i + 1)]; }),
 );
-const BASE = "https://aomi-studio.vercel.app";
+const BASE = "https://vierraapi.my.id";
 const cmd = async (...a) => {
   const r = await fetch(env.UPSTASH_REDIS_REST_URL, { method: "POST", headers: { Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}` }, body: JSON.stringify(a) });
   return (await r.json()).result;

@@ -2,7 +2,7 @@
 // tokens spent) so the workspace shot shows real scaffold files.
 import puppeteer from "puppeteer-core";
 
-const BASE = process.argv[2] || "https://aomi-studio.vercel.app";
+const BASE = process.argv[2] || "https://vierraapi.my.id";
 const OUT = process.argv[3] || "ui-shots/live";
 const browser = await puppeteer.launch({ executablePath: "/usr/bin/google-chrome", headless: "new", args: ["--no-sandbox"], protocolTimeout: 300000 });
 const page = await browser.newPage();
