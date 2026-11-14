@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   const ipKey = `login:ip:${hashIdentifier(requestIp(request))}`;
   const ipWindow = rateLimit(ipKey, 12);
   if (!ipWindow.ok) {
-    const blocked = errorResponse("Terlalu banyak percobaan masuk. Coba lagi sebentar.", 429);
+    const blocked = errorResponse("Too many sign-in attempts. Try again shortly.", 429);
     blocked.headers.set("Retry-After", String(ipWindow.retryAfter));
     return withSecurityHeaders(blocked);
   }
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
   const status = loginStatus(userKey);
   if (!status.ok) {
-    const locked = errorResponse("Terlalu banyak percobaan. Akun dikunci sementara.", 429);
+    const locked = errorResponse("Too many attempts. This account is locked for now.", 429);
     locked.headers.set("Retry-After", String(status.retryAfter));
     return withSecurityHeaders(locked);
   }
@@ -66,9 +66,9 @@ export async function POST(request: Request) {
       locked: outcome.locked,
     });
     // Identical answer for an unknown username and a wrong password.
-    const message = "Username atau password salah.";
+    const message = "Incorrect username or password.";
     if (outcome.locked) {
-      const locked = errorResponse("Terlalu banyak percobaan. Akun dikunci 15 menit.", 429);
+      const locked = errorResponse("Too many attempts. Account locked for 15 minutes.", 429);
       locked.headers.set("Retry-After", "900");
       return withSecurityHeaders(locked);
     }

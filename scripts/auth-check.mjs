@@ -151,7 +151,7 @@ await page.type("#password", "nope");
 await page.click('button[type="submit"]');
 await page.waitForFunction(() => Boolean(document.querySelector("#login-error")), { timeout: 15000 });
 const errorText = await page.$eval("#login-error", (el) => el.textContent?.trim() || "");
-check("a rejected login shows the server's message", errorText.includes("salah"), errorText.slice(0, 60));
+check("a rejected login shows the server's message", errorText.includes("Incorrect"), errorText.slice(0, 60));
 
 await page.evaluate(() => {
   document.querySelector("#username").value = "";

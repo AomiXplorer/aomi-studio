@@ -5,7 +5,7 @@ import { loadAuthConfig, ownerWhatsApp } from "@/lib/auth/config";
 import { toolNames } from "@/lib/agent/tools";
 
 export const metadata: Metadata = {
-  title: "Masuk — Aomi",
+  title: "Sign in — Aomi",
   robots: { index: false, follow: false, nocache: true },
 };
 
@@ -20,7 +20,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const tools = toolNames();
 
   return (
-    <main className="flex min-h-dvh flex-col bg-[#09090b] text-[#fafafa]">
+    <main lang="en" className="flex min-h-dvh flex-col bg-[#09090b] text-[#fafafa]">
       <header className="sh-enter flex items-center justify-between border-b border-[#1c1c20] px-5 py-4 sm:px-8">
         <div className="flex items-center gap-3">
           <span
@@ -34,7 +34,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="flex items-center gap-3 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#8b8b96]">
           <span className="hidden items-center gap-2 sm:flex">
             <span className="size-1.5 bg-[#fafafa]" aria-hidden />
-            sesi owner
+            owner session
           </span>
           <span className="hidden text-[#3a3a3f] sm:inline" aria-hidden>
             /
@@ -63,14 +63,13 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               className="sh-enter mt-5 text-[26px] font-medium leading-[1.15] tracking-[-0.025em] text-[#fafafa] sm:text-[30px]"
               style={{ "--sh-delay": "120ms" } as React.CSSProperties}
             >
-              Masuk ke workspace
+              Sign in to workspace
             </h1>
             <p
-              className="sh-enter mt-2.5 max-w-[44ch] text-[13px] leading-relaxed text-[#a1a1aa]"
+              className="sh-enter mt-3 font-mono text-[11px] uppercase tracking-[0.3em] text-[#a1a1aa]"
               style={{ "--sh-delay": "180ms" } as React.CSSProperties}
             >
-              Satu akun owner. Setiap request diperiksa, sesi berakhir sendiri setelah delapan jam, dan tidak ada
-              halaman yang terbuka tanpa cookie yang ditandatangani server.
+              AI AGENT X ASTRA
             </p>
 
             <div className="sh-enter mt-9" style={{ "--sh-delay": "260ms" } as React.CSSProperties}>
@@ -79,9 +78,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </div>
         </section>
 
-        <aside className="hidden min-h-0 overflow-hidden border-l border-[#1c1c20] lg:flex lg:flex-col" aria-label="Alat yang dipanggil agent">
+        <aside className="hidden min-h-0 overflow-hidden border-l border-[#1c1c20] lg:flex lg:flex-col" aria-label="Tools the agent can call">
           <div className="flex items-center justify-between border-b border-[#1c1c20] px-5 py-4">
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#8b8b96]">alat agent</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#8b8b96]">agent tools</p>
             <span className="font-mono text-[10px] text-[#8b8b96]">{tools.length}</span>
           </div>
 
@@ -111,17 +110,17 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
           <div className="border-t border-[#1c1c20] px-5 py-4">
             <p className="font-mono text-[10px] leading-relaxed text-[#8b8b96]">
-              file sungguhan
+              real files
               <br />
-              ekspor zip asli
+              real zip export
             </p>
           </div>
         </aside>
       </div>
 
       <footer className="sh-enter flex flex-col gap-1.5 border-t border-[#1c1c20] px-5 py-4 font-mono text-[10px] uppercase tracking-[0.16em] text-[#8b8b96] sm:flex-row sm:items-center sm:justify-between sm:px-8">
-        <p>cookie httponly · sesi 8 jam · csp</p>
-        <p>aomi studio — akses pribadi</p>
+        <p>httponly cookie · 8-hour session · csp</p>
+        <p>aomi studio — private access</p>
       </footer>
     </main>
   );
