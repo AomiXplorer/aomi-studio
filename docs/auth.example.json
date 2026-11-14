@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "ownerContact": { "whatsapp": "6281249578370" },
+  "users": [
+    {
+      "username": "Aomixplorer",
+      "role": "owner",
+      "scrypt": {
+        "n": 16384,
+        "r": 8,
+        "p": 1,
+        "salt": "REPLACE_WITH_SALT_FROM_npm_run_hash-password",
+        "key": "REPLACE_WITH_HASH_FROM_npm_run_hash-password"
+      },
+      "updatedAt": "2026-11-14"
+    }
+  ]
+}

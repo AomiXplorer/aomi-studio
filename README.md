@@ -176,3 +176,28 @@ Tested on 2026-11-14 against the live provider and a local production build:
   code, no dependency install on the server.
 - `install_dependencies` pins versions from the npm registry; installation happens on
   the machine that unpacks the exported ZIP.
+
+## Owner credentials (private repo, optional but recommended)
+
+The login reads its accounts from the first source that answers:
+
+1. a **private GitHub repo** file, when `AOMI_CONFIG_REPO` and `AOMI_CONFIG_TOKEN` are set;
+2. otherwise the `AOMI_AUTH_JSON` environment variable (base64 or raw JSON of the same file).
+
+Only a scrypt hash is stored. The plaintext password exists nowhere: not in the repo, not in
+the env vars, not in the bundle.
+
+| Variable | Where it lives | Meaning |
+| --- | --- | --- |
+| `AOMI_CONFIG_REPO` | Vercel env | `owner/aomi-config` (private) |
+| `AOMI_CONFIG_TOKEN` | Vercel env | read-only token for that repo (Contents: read) |
+| `AOMI_CONFIG_PATH` | optional | defaults to `auth.json` |
+| `AOMI_CONFIG_REF` | optional | defaults to `main` |
+| `AOMI_AUTH_JSON` | Vercel env | fallback copy of the same JSON |
+
+Setup: create a private repo, add `auth.json` built from `docs/auth.example.json` with the hash
+printed by `npm run hash-password -- "<password>"`, then point `AOMI_CONFIG_REPO` at it.
+The loader caches for five minutes, revalidates with an ETag, and falls back to the env copy or
+the last good config if GitHub is unreachable, so a repo outage never locks the owner out.
+`npm run check:config-source` exercises those paths against a stubbed GitHub API.
+

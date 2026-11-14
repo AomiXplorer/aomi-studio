@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "check:config-source": "node --experimental-strip-types scripts/config-source-check.mjs"
   },
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",
