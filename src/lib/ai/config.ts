@@ -4,9 +4,21 @@
  */
 const trimSlash = (value: string) => value.replace(/\/+$/, "");
 
+/**
+ * The active provider key is resolved per request (an administrator can switch it from
+ * Telegram or the panel), so the process default is only the last link in the chain.
+ */
+let runtimeApiKey: string | null = null;
+
+export function setRuntimeApiKey(key: string | null): void {
+  runtimeApiKey = key && key.trim() ? key.trim() : null;
+}
+
 export const aiConfig = {
   baseUrl: trimSlash(process.env.BANGUNWEB_BASE_URL || "https://router.bangunweb.com/v1"),
-  apiKey: process.env.BANGUNWEB_API_KEY || "",
+  get apiKey(): string {
+    return runtimeApiKey || process.env.BANGUNWEB_API_KEY || "";
+  },
   defaultModel: process.env.BANGUNWEB_MODEL || "bw-swift",
   imageModel: process.env.BANGUNWEB_IMAGE_MODEL || "bwr-image",
   audioModel: process.env.BANGUNWEB_AUDIO_MODEL || "kokoro",
@@ -15,6 +27,6 @@ export const aiConfig = {
   rateLimitPerMin: Number.isFinite(Number(process.env.AOMI_RATE_LIMIT_PER_MIN))
     ? Number(process.env.AOMI_RATE_LIMIT_PER_MIN)
     : 30,
-} as const;
+};
 
 export const providerKeyConfigured = () => aiConfig.apiKey.trim().length > 0;

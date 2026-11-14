@@ -49,8 +49,21 @@ export function withSecurityHeaders(response: Response, nonce?: string): Respons
   return response;
 }
 
-/** Paths reachable without a session: the login page and the endpoints it needs. */
-export const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/logout", "/api/health"] as const;
+/**
+ * Paths reachable without a session cookie.
+ *
+ * /api/telegram/webhook and /api/cron/backup are here because their caller is a machine,
+ * not a browser: both authenticate themselves (a Telegram secret token and a cron secret)
+ * before they touch anything, and neither of them reads a session.
+ */
+export const PUBLIC_PATHS = [
+  "/login",
+  "/api/auth/login",
+  "/api/auth/logout",
+  "/api/health",
+  "/api/telegram/webhook",
+  "/api/cron/backup",
+] as const;
 
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));

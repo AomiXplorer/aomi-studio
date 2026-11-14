@@ -185,7 +185,18 @@ export const api = {
   },
   messages: {
     list: async (id: string) => {
-      if (await isClientStorage()) return { messages: local.messages.list(id) };
+      if (await isClientStorage()) {
+        const own = local.messages.list(id);
+        if (own.length > 0) return { messages: own };
+        // Nothing local (new device, cleared browser, deployed again): ask the database.
+        try {
+          const cloud = await request<{ messages: StoredMessage[] }>(`/api/projects/${id}/messages`);
+          if (cloud.messages.length > 0) local.messages.set(id, cloud.messages);
+          return cloud;
+        } catch {
+          return { messages: own };
+        }
+      }
       return request<{ messages: StoredMessage[] }>(`/api/projects/${id}/messages`);
     },
   },

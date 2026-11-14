@@ -4,17 +4,16 @@ import { prepareSession } from "@/lib/workspace/session";
 import { runWithStore } from "@/lib/workspace/store";
 import { json, parseBody, serverError } from "@/lib/api";
 import type { ProjectAnalysis } from "@/lib/services/analysis";
-import { requireSession } from "@/lib/auth/require";
+import { requireProject } from "@/lib/db/guard";
 
 export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
-  const gate = await requireSession();
-  if (gate.error) return gate.error;
-
   const { id } = await params;
+  const gate = await requireProject(id);
+  if (gate.error) return gate.error;
   try {
     return json({ analysis: await analyzeProject(id) });
   } catch (error) {
@@ -45,10 +44,9 @@ const schema = z.object({
 
 /** Static checks for a workspace the browser owns. */
 export async function POST(request: Request, { params }: Params) {
-  const gate = await requireSession();
+  const { id } = await params;
+  const gate = await requireProject(id);
   if (gate.error) return gate.error;
-
-  await params;
   const parsed = await parseBody(request, schema);
   if (parsed.error) return parsed.error;
   try {

@@ -1,17 +1,16 @@
 import { z } from "zod";
 import { listProjectFiles, readProjectFile, writeProjectFile, deleteProjectFile, renameProjectFile, mimeForPath } from "@/lib/workspace/service";
 import { errorResponse, json, parseBody, serverError } from "@/lib/api";
-import { requireSession } from "@/lib/auth/require";
+import { requireProject } from "@/lib/db/guard";
 
 export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: Params) {
-  const gate = await requireSession();
-  if (gate.error) return gate.error;
-
   const { id } = await params;
+  const gate = await requireProject(id);
+  if (gate.error) return gate.error;
   const url = new URL(request.url);
   const path = url.searchParams.get("path");
   const download = url.searchParams.get("download") === "1";
@@ -44,10 +43,9 @@ const writeSchema = z.object({
 });
 
 export async function PUT(request: Request, { params }: Params) {
-  const gate = await requireSession();
-  if (gate.error) return gate.error;
-
   const { id } = await params;
+  const gate = await requireProject(id);
+  if (gate.error) return gate.error;
   const parsed = await parseBody(request, writeSchema);
   if (parsed.error) return parsed.error;
   try {
@@ -66,10 +64,9 @@ export async function PUT(request: Request, { params }: Params) {
 const moveSchema = z.object({ from: z.string().min(1), to: z.string().min(1) });
 
 export async function POST(request: Request, { params }: Params) {
-  const gate = await requireSession();
-  if (gate.error) return gate.error;
-
   const { id } = await params;
+  const gate = await requireProject(id);
+  if (gate.error) return gate.error;
   const parsed = await parseBody(request, moveSchema);
   if (parsed.error) return parsed.error;
   try {
@@ -82,10 +79,9 @@ export async function POST(request: Request, { params }: Params) {
 const deleteSchema = z.object({ path: z.string().min(1) });
 
 export async function DELETE(request: Request, { params }: Params) {
-  const gate = await requireSession();
-  if (gate.error) return gate.error;
-
   const { id } = await params;
+  const gate = await requireProject(id);
+  if (gate.error) return gate.error;
   const parsed = await parseBody(request, deleteSchema);
   if (parsed.error) return parsed.error;
   try {

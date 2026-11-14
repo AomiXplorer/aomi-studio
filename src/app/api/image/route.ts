@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { generateImage } from "@/lib/ai/bangunweb";
+import { applyProviderKey } from "@/lib/ai/keys";
 import { aiConfig, providerKeyConfigured } from "@/lib/ai/config";
 import { getProject, newId, saveAsset } from "@/lib/workspace/service";
 import { clientKey, rateLimit } from "@/lib/services/rate-limit";
@@ -22,6 +23,7 @@ const schema = z.object({
 export async function POST(request: Request) {
   const gate = await requireSession();
   if (gate.error) return gate.error;
+  await applyProviderKey();
 
   if (!providerKeyConfigured()) return errorResponse("BANGUNWEB_API_KEY belum diatur.", 500, { code: "not_configured" });
   const limit = rateLimit(clientKey(request, "image"), Math.max(3, Math.floor(aiConfig.rateLimitPerMin / 4)));

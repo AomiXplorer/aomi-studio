@@ -2,17 +2,16 @@ import { z } from "zod";
 import { deleteProject, getProject, touchProject } from "@/lib/workspace/service";
 import { storageStatus } from "@/lib/workspace/store";
 import { errorResponse, json, parseBody, serverError } from "@/lib/api";
-import { requireSession } from "@/lib/auth/require";
+import { requireProject } from "@/lib/db/guard";
 
 export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
-  const gate = await requireSession();
-  if (gate.error) return gate.error;
-
   const { id } = await params;
+  const gate = await requireProject(id);
+  if (gate.error) return gate.error;
   try {
     const project = await getProject(id);
     if (!project) return errorResponse("Project tidak ditemukan.", 404);
@@ -30,10 +29,9 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(request: Request, { params }: Params) {
-  const gate = await requireSession();
-  if (gate.error) return gate.error;
-
   const { id } = await params;
+  const gate = await requireProject(id);
+  if (gate.error) return gate.error;
   const parsed = await parseBody(request, patchSchema);
   if (parsed.error) return parsed.error;
   try {
@@ -45,10 +43,9 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
-  const gate = await requireSession();
-  if (gate.error) return gate.error;
-
   const { id } = await params;
+  const gate = await requireProject(id);
+  if (gate.error) return gate.error;
   try {
     await deleteProject(id);
     return json({ ok: true });

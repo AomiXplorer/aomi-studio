@@ -102,10 +102,12 @@ export async function createProject(input: {
   stack?: string;
   model: string;
   files?: Record<string, string>;
+  /** Accepted only when it is a safe id, so the browser can pre-generate one. */
+  id?: string;
 }): Promise<ProjectMeta> {
   const now = new Date().toISOString();
   const meta: ProjectMeta = {
-    id: randomUUID(),
+    id: input.id && /^[A-Za-z0-9_-]{6,64}$/.test(input.id) ? input.id : randomUUID(),
     name: input.name.trim().slice(0, 80) || "Untitled project",
     description: (input.description || "").slice(0, 400),
     stack: input.stack || "blank",

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { applyProviderKey } from "@/lib/ai/keys";
 import { aiConfig, providerKeyConfigured } from "@/lib/ai/config";
 import { runAgent, type AgentEvent } from "@/lib/agent/engine";
 import type { ChatMessage } from "@/lib/ai/types";
@@ -15,7 +16,9 @@ import { runWithStore } from "@/lib/workspace/store";
 import { prepareSession, snapshotSession, type Session } from "@/lib/workspace/session";
 import { clientKey, rateLimit } from "@/lib/services/rate-limit";
 import { errorResponse, parseBody, serverError } from "@/lib/api";
-import { requireSession } from "@/lib/auth/require";
+import { requireProject } from "@/lib/db/guard";
+import { mirrorMessage } from "@/lib/db/projects";
+import { redisConfigured } from "@/lib/db/redis";
 
 export const runtime = "nodejs";
 // Vercel rejects values above 60 for this plan tier (verified by deploy), so the
@@ -66,8 +69,14 @@ function toHistory(messages: StoredMessage[]): ChatMessage[] {
 }
 
 export async function POST(request: Request) {
-  const gate = await requireSession();
+  const parsedForGate = await request.clone().json().catch(() => null);
+  const projectIdForGate = typeof parsedForGate?.projectId === "string" ? parsedForGate.projectId : "";
+  const gate = projectIdForGate
+    ? await requireProject(projectIdForGate)
+    : { error: errorResponse("projectId wajib diisi.", 400) };
   if (gate.error) return gate.error;
+  const ownerId = gate.account.user.id;
+  await applyProviderKey();
 
   if (!providerKeyConfigured()) {
     return errorResponse("BANGUNWEB_API_KEY belum diatur di environment server.", 500, { code: "not_configured" });
@@ -151,7 +160,12 @@ export async function POST(request: Request) {
       };
 
       void inScope(async () => {
-        if (!continuation) send({ type: "user_saved", message: userMessage });
+        if (!continuation) {
+          send({ type: "user_saved", message: userMessage });
+          if (redisConfigured()) {
+            await mirrorMessage(projectId, ownerId, userMessage).catch(() => undefined);
+          }
+        }
 
         try {
           const result = await runAgent({
@@ -189,13 +203,16 @@ export async function POST(request: Request) {
                 model: assistant.model ?? last.model,
               };
               await inScope(() => replaceMessages(projectId, [...stored.slice(0, -1), merged]));
+              if (redisConfigured()) await mirrorMessage(projectId, ownerId, merged).catch(() => undefined);
               send({ type: "assistant_saved", message: merged });
             } else {
               await appendMessage(projectId, assistant);
+              if (redisConfigured()) await mirrorMessage(projectId, ownerId, assistant).catch(() => undefined);
               send({ type: "assistant_saved", message: assistant });
             }
           } else {
             await appendMessage(projectId, assistant);
+            if (redisConfigured()) await mirrorMessage(projectId, ownerId, assistant).catch(() => undefined);
             send({ type: "assistant_saved", message: assistant });
           }
           if (result.paused) send({ type: "turn_paused", note: "Batas waktu permintaan tercapai, pekerjaan dilanjutkan otomatis." } as AgentEvent);

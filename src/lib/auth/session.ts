@@ -8,13 +8,26 @@
 export const SESSION_COOKIE = "aomi_session";
 export const SESSION_TTL_SECONDS = 8 * 60 * 60;
 
+export type SessionRole = "admin" | "user";
+
 export interface SessionClaims {
+  /** Username at the time the session was issued. */
   sub: string;
-  role: "owner" | "member";
+  /** Account id, so a rename does not strand the session. Empty on legacy cookies. */
+  uid: string;
+  role: SessionRole;
+  /** Session generation: a ban, password reset or delete bumps it and kills old cookies. */
+  ver: number;
   iat: number;
   exp: number;
   /** Short fingerprint of the user agent that created the session. */
   ua: string;
+}
+
+function normalizeRole(value: unknown): SessionRole | null {
+  if (value === "admin" || value === "owner") return "admin";
+  if (value === "user" || value === "member") return "user";
+  return null;
 }
 
 const encoder = new TextEncoder();
@@ -44,14 +57,16 @@ export async function userAgentFingerprint(userAgent: string | null): Promise<st
 }
 
 export async function createSessionToken(
-  user: { username: string; role: "owner" | "member" },
+  user: { username: string; uid?: string; role: SessionRole; version?: number },
   secret: string,
   userAgent: string | null,
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const claims: SessionClaims = {
     sub: user.username,
+    uid: user.uid || "",
     role: user.role,
+    ver: user.version || 0,
     iat: now,
     exp: now + SESSION_TTL_SECONDS,
     ua: await userAgentFingerprint(userAgent),
@@ -78,12 +93,23 @@ export async function readSessionToken(
       encoder.encode(body),
     );
     if (!valid) return null;
-    const claims = JSON.parse(decoder.decode(fromBase64Url(body))) as SessionClaims;
-    if (typeof claims.sub !== "string" || typeof claims.exp !== "number") return null;
-    if (claims.role !== "owner" && claims.role !== "member") return null;
-    if (claims.exp <= Math.floor(Date.now() / 1000)) return null;
-    if (claims.ua !== (await userAgentFingerprint(userAgent))) return null;
-    return claims;
+    const parsed = JSON.parse(decoder.decode(fromBase64Url(body))) as Partial<SessionClaims>;
+    if (typeof parsed.sub !== "string" || typeof parsed.exp !== "number") return null;
+    const role = normalizeRole(parsed.role);
+    if (!role) return null;
+    if (parsed.exp <= Math.floor(Date.now() / 1000)) return null;
+    if (parsed.ua !== (await userAgentFingerprint(userAgent))) return null;
+    // Cookies issued before accounts moved to the database have no uid or version; they
+    // stay valid until they expire and are upgraded on the next sign-in.
+    return {
+      sub: parsed.sub,
+      uid: typeof parsed.uid === "string" ? parsed.uid : "",
+      role,
+      ver: typeof parsed.ver === "number" ? parsed.ver : 0,
+      iat: typeof parsed.iat === "number" ? parsed.iat : 0,
+      exp: parsed.exp,
+      ua: parsed.ua as string,
+    };
   } catch {
     return null;
   }

@@ -1,17 +1,16 @@
 import { z } from "zod";
 import { deleteAsset, listAssets, saveAsset } from "@/lib/workspace/service";
 import { errorResponse, json, parseBody, serverError } from "@/lib/api";
-import { requireSession } from "@/lib/auth/require";
+import { requireProject } from "@/lib/db/guard";
 
 export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
-  const gate = await requireSession();
-  if (gate.error) return gate.error;
-
   const { id } = await params;
+  const gate = await requireProject(id);
+  if (gate.error) return gate.error;
   try {
     return json({ assets: await listAssets(id) });
   } catch (error) {
@@ -31,10 +30,9 @@ const assetSchema = z.object({
 });
 
 export async function POST(request: Request, { params }: Params) {
-  const gate = await requireSession();
-  if (gate.error) return gate.error;
-
   const { id } = await params;
+  const gate = await requireProject(id);
+  if (gate.error) return gate.error;
   const parsed = await parseBody(request, assetSchema);
   if (parsed.error) return parsed.error;
   try {
@@ -56,10 +54,9 @@ export async function POST(request: Request, { params }: Params) {
 }
 
 export async function DELETE(request: Request, { params }: Params) {
-  const gate = await requireSession();
-  if (gate.error) return gate.error;
-
   const { id } = await params;
+  const gate = await requireProject(id);
+  if (gate.error) return gate.error;
   const assetId = new URL(request.url).searchParams.get("assetId");
   if (!assetId) return errorResponse("assetId wajib diisi.", 400);
   try {

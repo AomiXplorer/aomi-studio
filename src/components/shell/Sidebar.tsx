@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AudioLines, FolderCode, Image as ImageIcon, MessageSquare, Plus, Settings2 } from "lucide-react";
+import { AudioLines, FolderCode, Image as ImageIcon, MessageSquare, Plus, Settings2, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/client/api";
 import type { ProjectMeta } from "@/lib/workspace/service";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,20 @@ const NAV = [
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void fetch("/api/auth/session", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (alive && payload?.user?.role === "admin") setIsAdmin(true);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -52,7 +66,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav aria-label="Navigasi utama" className="mt-4 flex flex-col gap-0.5 px-2.5">
-        {NAV.map((item) => {
+        {(isAdmin ? [...NAV, { href: "/admin", label: "Admin", icon: ShieldCheck }] : NAV).map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
