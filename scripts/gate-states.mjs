@@ -1,60 +1,58 @@
 import puppeteer from "puppeteer-core";
 import { mkdirSync } from "node:fs";
 
-const BASE = process.env.BASE || "http://127.0.0.1:3113";
-const OUT = process.env.OUT || "ui-shots/gate";
+const BASE = process.env.BASE || "http://127.0.0.1:3114";
+const OUT = process.env.OUT || "ui-shots/shell";
 mkdirSync(OUT, { recursive: true });
 const browser = await puppeteer.launch({ executablePath: "/usr/bin/google-chrome", headless: "new", args: ["--no-sandbox"] });
 
-// 1. Entry filmstrip: the page as it inks itself in.
+// 1. The page as it arrives.
 {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900 });
   await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded" });
-  for (const [index, delay] of [90, 220, 380, 900].entries()) {
+  for (const [index, delay] of [80, 200, 340, 800].entries()) {
     await new Promise((r) => setTimeout(r, delay));
     await page.screenshot({ path: `${OUT}/entry-${index + 1}.png` });
   }
   await page.close();
 }
 
-// 2. Settled desktop, focus state, error state, pending state.
+// 2. Settled, focus, error, pending.
 {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900 });
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle2" });
-  await new Promise((r) => setTimeout(r, 1500));
+  await new Promise((r) => setTimeout(r, 1200));
   await page.screenshot({ path: `${OUT}/desktop.png` });
+
+  // The rail has to actually move, not just exist.
+  const before = await page.$eval(".sh-ticker-track", (el) => getComputedStyle(el).transform);
+  await new Promise((r) => setTimeout(r, 1200));
+  const after = await page.$eval(".sh-ticker-track", (el) => getComputedStyle(el).transform);
+  console.log("tool rail moves:", before !== after, "|", before, "->", after);
 
   await page.type("#username", "Aomixplorer");
   await page.click("#password");
   await new Promise((r) => setTimeout(r, 420));
   await page.screenshot({ path: `${OUT}/focus.png` });
 
-  // Real rejected login: this is the state a wrong password produces.
   await page.type("#password", "salah-sekali");
   await page.click('button[type="submit"]');
   await page.waitForFunction(() => Boolean(document.querySelector("#login-error")), { timeout: 20000 });
   await new Promise((r) => setTimeout(r, 360));
   await page.screenshot({ path: `${OUT}/error.png` });
-  const sizes = await page.evaluate(() => {
-    const toggle = document.querySelector('button[aria-label*="password"]');
-    const r = toggle.getBoundingClientRect();
-    return { toggle: { w: Math.round(r.width), h: Math.round(r.height) } };
-  });
-  console.log("hit targets:", JSON.stringify(sizes));
+  console.log("error line:", await page.$eval("#login-error", (el) => el.textContent.trim()));
   await page.close();
 }
 
-// 3. Pending state: hold the login response so the button can be photographed mid-check.
+// 3. Pending: hold the response so the checking state can be seen.
 {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900 });
   await page.setRequestInterception(true);
   page.on("request", async (request) => {
-    if (request.url().endsWith("/api/auth/login")) {
-      await new Promise((r) => setTimeout(r, 2600));
-    }
+    if (request.url().endsWith("/api/auth/login")) await new Promise((r) => setTimeout(r, 2800));
     request.continue();
   });
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle2" });
@@ -63,24 +61,35 @@ const browser = await puppeteer.launch({ executablePath: "/usr/bin/google-chrome
   await page.click('button[type="submit"]');
   await new Promise((r) => setTimeout(r, 700));
   const label = await page.$eval('button[type="submit"]', (el) => el.textContent.trim());
-  const animating = await page.evaluate(() => document.querySelectorAll(".gate-pending").length);
-  console.log("pending label:", label, "| pending bar present:", animating);
+  const log = await page.$eval('[aria-live="polite"]', (el) => el.textContent.trim());
+  console.log("pending:", JSON.stringify({ label, log }));
   await page.screenshot({ path: `${OUT}/pending.png` });
   await page.close();
 }
 
-// 4. Mobile settled.
+// 4. Mobile.
 {
   const page = await browser.newPage();
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle2" });
-  await new Promise((r) => setTimeout(r, 1400));
-  await page.screenshot({ path: `${OUT}/mobile.png`, fullPage: true });
-  const overflow = await page.evaluate(() => ({
-    scrollWidth: document.documentElement.scrollWidth,
-    clientWidth: document.documentElement.clientWidth,
-  }));
-  console.log("mobile overflow:", JSON.stringify(overflow));
+  await new Promise((r) => setTimeout(r, 1200));
+  await page.screenshot({ path: `${OUT}/mobile.png` });
+  await page.close();
+}
+
+// 5. Reduced motion: content must be fully visible, rail stationary.
+{
+  const page = await browser.newPage();
+  await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
+  await page.setViewport({ width: 1440, height: 900 });
+  await page.goto(`${BASE}/login`, { waitUntil: "networkidle2" });
+  await new Promise((r) => setTimeout(r, 400));
+  const a = await page.$eval(".sh-ticker-track", (el) => getComputedStyle(el).transform);
+  await new Promise((r) => setTimeout(r, 900));
+  const b = await page.$eval(".sh-ticker-track", (el) => getComputedStyle(el).transform);
+  const heading = await page.$eval("h1", (el) => ({ text: el.textContent.trim(), opacity: getComputedStyle(el).opacity }));
+  console.log("reduced motion:", JSON.stringify({ railStill: a === b, heading }));
+  await page.screenshot({ path: `${OUT}/reduced-motion.png` });
   await page.close();
 }
 
