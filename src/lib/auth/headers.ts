@@ -56,6 +56,14 @@ export function withSecurityHeaders(response: Response, nonce?: string): Respons
  * not a browser: both authenticate themselves (a Telegram secret token and a cron secret)
  * before they touch anything, and neither of them reads a session.
  */
+/**
+ * Static files a link preview needs before any session exists.
+ *
+ * The share card and the artwork are public by definition: they are what WhatsApp and the
+ * other unfurlers fetch, and neither contains anything from a user's workspace.
+ */
+export const PUBLIC_FILES = ["/og-banner.jpg", "/astra.webp"] as const;
+
 export const PUBLIC_PATHS = [
   "/login",
   "/api/auth/login",
@@ -66,5 +74,6 @@ export const PUBLIC_PATHS = [
 ] as const;
 
 export function isPublicPath(pathname: string): boolean {
+  if ((PUBLIC_FILES as readonly string[]).includes(pathname)) return true;
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
