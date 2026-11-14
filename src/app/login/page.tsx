@@ -56,8 +56,29 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </div>
       </header>
 
+
+      {/* Astra on narrow screens: the rail is desktop-only, so the artwork gets its own band. */}
+      <div className="relative h-[104px] shrink-0 overflow-hidden border-b border-[#1c1c20] lg:hidden">
+        <Image
+          src="/astra.webp"
+          alt="Astra, the character Aomi is named alongside"
+          width={736}
+          height={563}
+          priority
+          sizes="100vw"
+          className="h-full w-full select-none object-cover object-[50%_34%] opacity-90 grayscale"
+        />
+        <span
+          aria-hidden
+          className="absolute inset-0 bg-[linear-gradient(to_top,#09090b_0%,rgba(9,9,11,0.12)_58%,rgba(9,9,11,0))]"
+        />
+        <p className="absolute bottom-2.5 left-5 font-mono text-[10px] uppercase tracking-[0.24em] text-[#e4e4e7]">
+          astra
+        </p>
+      </div>
+
       <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="flex items-center px-5 py-10 sm:px-8 lg:px-14">
+        <section className="flex items-center px-5 py-7 sm:px-8 sm:py-10 lg:px-14">
           <div className="w-full max-w-[520px]">
             <p
               className="sh-enter flex items-center gap-1.5 font-mono text-[11px] text-[#8b8b96]"
