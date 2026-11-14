@@ -90,6 +90,10 @@ async function call<T>(options: CallOptions): Promise<T> {
   const secret = austinApiSecret();
   const rawBody = options.body === undefined ? "" : JSON.stringify(options.body);
   const headers: Record<string, string> = { "Content-Type": "application/json", "X-API-Key": apiKey };
+  // When the deployment's egress IP is not stable (Vercel), calls go through the relay on a
+  // machine with one fixed address. AustinPay still verifies the key and the signature.
+  const relayToken = (process.env.AUSTIN_PROXY_TOKEN || "").trim();
+  if (relayToken) headers["x-proxy-token"] = relayToken;
   if (secret) {
     const { timestamp, signature } = signRequest(options.method, options.path, rawBody, secret);
     headers["X-Timestamp"] = timestamp;

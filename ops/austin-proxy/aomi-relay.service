@@ -1,0 +1,17 @@
+[Unit]
+Description=Aomi AustinPay relay (fixed egress IP)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/aomi-relay
+EnvironmentFile=/opt/aomi-relay/relay.env
+ExecStart=/usr/bin/node /opt/aomi-relay/server.mjs
+Restart=always
+RestartSec=3
+DynamicUser=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
