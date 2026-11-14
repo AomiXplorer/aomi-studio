@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Eye, EyeOff, MessageCircle } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, MessageCircle, Sparkle } from "lucide-react";
 
 /** Only ever redirects inside this site: `//evil.com` and absolute URLs are refused. */
 function safeNext(raw: string | undefined): string {
@@ -15,7 +16,17 @@ function safeNext(raw: string | undefined): string {
  * fields that behave like prompt lines and an output log under them. Everything a
  * form still needs (labels, autocomplete, aria-invalid, focus rings) is kept in place.
  */
-export function LoginForm({ next, whatsapp, configured }: { next?: string; whatsapp: string; configured: boolean }) {
+export function LoginForm({
+  next,
+  whatsapp,
+  configured,
+  priceLabel,
+}: {
+  next?: string;
+  whatsapp: string;
+  configured: boolean;
+  priceLabel: string;
+}) {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -61,6 +72,27 @@ export function LoginForm({ next, whatsapp, configured }: { next?: string; whats
 
   return (
     <form onSubmit={submit} noValidate className="w-full">
+      {/* Two ways in, one primary action. Sign-in stays the loudest button on the sheet;
+          buying access is the quieter, outlined half of the same switch. */}
+      <div className="mb-7 grid grid-cols-2 border border-[#1c1c20]" role="group" aria-label="Sign in or buy access">
+        <span
+          aria-current="page"
+          className="flex h-11 items-center justify-center gap-2 border-b-2 border-[#fafafa] bg-[#111113] font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#fafafa]"
+        >
+          Login
+        </span>
+        <Link
+          href="/buy"
+          className="group flex h-11 items-center justify-center gap-2 border-b-2 border-transparent border-l border-l-[#1c1c20] font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#a1a1aa] transition-colors hover:bg-[#111113] hover:text-[#fafafa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa]/60 focus-visible:ring-inset"
+        >
+          <Sparkle className="size-3 text-[#8b8b96] transition-colors group-hover:text-[#fafafa]" aria-hidden />
+          Buy Access
+          <span className="border border-[#27272a] px-1.5 py-0.5 text-[9.5px] tracking-[0.1em] text-[#8b8b96] transition-colors group-hover:border-[#3a3a3f] group-hover:text-[#d4d4d8]">
+            {priceLabel}
+          </span>
+        </Link>
+      </div>
+
       <div className={invalid ? "sh-shake" : undefined}>
         <div className={`${row} sh-field`} data-invalid={invalid}>
           <span className="sh-gutter pr-2 pt-4 font-mono text-[10px] leading-none text-[#8b8b96]">01</span>

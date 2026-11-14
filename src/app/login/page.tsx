@@ -3,6 +3,7 @@ import Image from "next/image";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { LiveClock } from "@/components/auth/LiveClock";
 import { loadAuthConfig, ownerWhatsApp } from "@/lib/auth/config";
+import { accessPriceIdr } from "@/lib/payments/catalog";
 import { toolNames } from "@/lib/agent/tools";
 
 export const metadata: Metadata = {
@@ -106,7 +107,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </p>
 
             <div className="sh-enter mt-9" style={{ "--sh-delay": "260ms" } as React.CSSProperties}>
-              <LoginForm next={next} whatsapp={ownerWhatsApp(state)} configured={Boolean(state.config)} />
+              <LoginForm
+                next={next}
+                whatsapp={ownerWhatsApp(state)}
+                configured={Boolean(state.config)}
+                priceLabel={`Rp${accessPriceIdr().toLocaleString("id-ID")}`}
+              />
             </div>
           </div>
         </section>

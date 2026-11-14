@@ -9,7 +9,9 @@ import { z } from "zod";
 import { errorResponse, json, parseBody, serverError } from "@/lib/api";
 import { requireAdmin, sameOrigin } from "@/lib/auth/require";
 import { passwordProblem, usernameProblem } from "@/lib/auth/bcrypt";
-import { adminCount, createUser, deleteUser, getUserById, renameUser, setPassword, setRole, setStatus } from "@/lib/db/users";
+import { adminCount, createUser, deleteUser, getUserById, renameUser, setEmail, setPassword, setRole, setStatus } from "@/lib/db/users";
+import { generatePassword } from "@/lib/payments/provision";
+import { emailProblem, normaliseEmail } from "@/lib/payments/guard";
 import { addApiKey, deleteApiKey, getApiKey, setActiveKey, toggleApiKey } from "@/lib/db/apikeys";
 import { purgeUserProjects } from "@/lib/db/projects";
 import { audit } from "@/lib/db/audit";
@@ -26,7 +28,10 @@ const schema = z.discriminatedUnion("action", [
     username: z.string().min(3).max(32),
     password: z.string().min(8).max(200),
     role: z.enum(["admin", "user"]).default("user"),
+    email: z.string().max(254).optional(),
   }),
+  z.object({ action: z.literal("setEmail"), userId: z.string(), email: z.string().max(254) }),
+  z.object({ action: z.literal("resetPasswordAuto"), userId: z.string() }),
   z.object({ action: z.literal("setRole"), userId: z.string(), role: z.enum(["admin", "user"]) }),
   z.object({ action: z.literal("setStatus"), userId: z.string(), status: z.enum(["active", "banned"]) }),
   z.object({ action: z.literal("resetPassword"), userId: z.string(), password: z.string().min(8).max(200) }),
@@ -69,7 +74,17 @@ export async function POST(request: Request) {
         if (nameProblem) return errorResponse(nameProblem, 400);
         const passProblem = passwordProblem(input.password);
         if (passProblem) return errorResponse(passProblem, 400);
-        const created = await createUser({ username: input.username, password: input.password, role: input.role, createdBy: `web:${actorId}` });
+        if (input.email) {
+          const mailIssue = emailProblem(input.email);
+          if (mailIssue) return errorResponse(mailIssue, 400);
+        }
+        const created = await createUser({
+          username: input.username,
+          password: input.password,
+          role: input.role,
+          createdBy: `web:${actorId}`,
+          email: input.email ? normaliseEmail(input.email) : undefined,
+        });
         if ("error" in created) return errorResponse(created.error, 409);
         await audit({ actorType: "user", actorId, action: "user.created", target: created.user.username, detail: `via panel · ${input.role}` });
         return json({ ok: true, user: created.user });
@@ -102,6 +117,27 @@ export async function POST(request: Request) {
         await setPassword(input.userId, input.password);
         await audit({ actorType: "user", actorId, action: "user.password_reset", target: target.username });
         return json({ ok: true });
+      }
+      case "setEmail": {
+        const target = await getUserById(input.userId);
+        if (!target) return errorResponse("User tidak ditemukan.", 404);
+        if (input.email) {
+          const mailIssue = emailProblem(input.email);
+          if (mailIssue) return errorResponse(mailIssue, 400);
+        }
+        const result = await setEmail(input.userId, input.email ? normaliseEmail(input.email) : "");
+        if (result.error) return errorResponse(result.error, 409);
+        await audit({ actorType: "user", actorId, action: "user.email_changed", target: target.username, detail: input.email ? "email diset" : "email dikosongkan" });
+        return json({ ok: true });
+      }
+      case "resetPasswordAuto": {
+        const target = await getUserById(input.userId);
+        if (!target) return errorResponse("User tidak ditemukan.", 404);
+        const password = generatePassword();
+        await setPassword(input.userId, password);
+        await audit({ actorType: "user", actorId, action: "user.password_reset_auto", target: target.username });
+        // Shown once to the owner so it can be relayed if the account has no email yet.
+        return json({ ok: true, username: target.username, password, hasEmail: Boolean(target.email) });
       }
       case "renameUser": {
         const nameProblem = usernameProblem(input.username);

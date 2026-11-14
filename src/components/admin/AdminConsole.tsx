@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Check, Database, KeyRound, Loader2, RefreshCw, ShieldCheck, Trash2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PaymentsPanel } from "./PaymentsPanel";
 
 interface AdminUser {
   id: string;
   username: string;
+  email: string;
   role: "admin" | "user";
   status: "active" | "banned";
   createdAt: string;
@@ -48,10 +50,11 @@ interface Overview {
   database: { configured: boolean; ok: boolean; latencyMs: number; error?: string; encryption: boolean };
 }
 
-type Tab = "users" | "keys" | "activity" | "system";
+type Tab = "users" | "payments" | "keys" | "activity" | "system";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "users", label: "Accounts" },
+  { id: "payments", label: "Payments" },
   { id: "keys", label: "Provider keys" },
   { id: "activity", label: "Activity" },
   { id: "system", label: "System" },
@@ -197,6 +200,7 @@ export function AdminConsole() {
 
       <div className="mt-5">
         {tab === "users" ? <UsersTab data={data} busy={busy} act={act} /> : null}
+        {tab === "payments" ? <PaymentsPanel /> : null}
         {tab === "keys" ? <KeysTab data={data} busy={busy} act={act} /> : null}
         {tab === "activity" ? <ActivityTab data={data} /> : null}
         {tab === "system" ? <SystemTab data={data} busy={busy} act={act} /> : null}
@@ -208,7 +212,7 @@ export function AdminConsole() {
 type Act = (key: string, body: Record<string, unknown>) => Promise<void>;
 
 function UsersTab({ data, busy, act }: { data: Overview | null; busy: string | null; act: Act }) {
-  const [form, setForm] = useState({ username: "", password: "", role: "user" as "user" | "admin" });
+  const [form, setForm] = useState({ username: "", email: "", password: "", role: "user" as "user" | "admin" });
   const [reset, setReset] = useState<{ id: string; value: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -220,15 +224,19 @@ function UsersTab({ data, busy, act }: { data: Overview | null; busy: string | n
         className="rounded-xl border border-line bg-panel p-4"
         onSubmit={(event) => {
           event.preventDefault();
-          void act("create", { action: "createUser", username: form.username, password: form.password, role: form.role }).then(() =>
-            setForm({ username: "", password: "", role: "user" }),
-          );
+          void act("create", {
+            action: "createUser",
+            username: form.username,
+            email: form.email || undefined,
+            password: form.password,
+            role: form.role,
+          }).then(() => setForm({ username: "", email: "", password: "", role: "user" }));
         }}
       >
         <p className="flex items-center gap-2 text-[12.5px] font-medium text-ink">
           <Users className="size-4" aria-hidden /> New account
         </p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_130px_auto]">
+        <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_1fr_120px_auto]">
           <input
             required
             minLength={3}
@@ -237,6 +245,14 @@ function UsersTab({ data, busy, act }: { data: Overview | null; busy: string | n
             onChange={(event) => setForm({ ...form, username: event.target.value })}
             placeholder="username"
             aria-label="Username"
+            className="h-9 rounded-lg border border-line bg-surface px-2.5 text-[13px] text-ink outline-none focus:border-ink"
+          />
+          <input
+            type="email"
+            value={form.email}
+            onChange={(event) => setForm({ ...form, email: event.target.value })}
+            placeholder="email (opsional)"
+            aria-label="Email"
             className="h-9 rounded-lg border border-line bg-surface px-2.5 text-[13px] text-ink outline-none focus:border-ink"
           />
           <input
@@ -287,7 +303,10 @@ function UsersTab({ data, busy, act }: { data: Overview | null; busy: string | n
               <tr key={user.id} className="border-b border-line last:border-0">
                 <td className="px-3 py-2.5">
                   <p className="text-[13px] text-ink">{user.username}</p>
-                  <p className="text-[11px] text-faint">{user.createdBy}</p>
+                  {user.email ? <p className="text-[11px] text-muted">{user.email}</p> : null}
+                  <p className="text-[11px] text-faint">
+                    {user.createdBy} · daftar {fmt(user.createdAt)}
+                  </p>
                 </td>
                 <td className="px-3 py-2.5 text-[12.5px] text-muted">{user.role}</td>
                 <td className="px-3 py-2.5">

@@ -19,6 +19,8 @@ export type Status = "active" | "banned";
 export interface UserRecord {
   id: string;
   username: string;
+  /** Set for accounts created by a purchase or added by the owner. Empty on legacy rows. */
+  email: string;
   role: Role;
   status: Status;
   createdAt: string;
@@ -36,6 +38,7 @@ function toRecord(raw: Record<string, string> | null): RawUser | null {
   return {
     id: raw.id,
     username: raw.username || "",
+    email: raw.email || "",
     role: (raw.role === "admin" ? "admin" : "user") as Role,
     status: (raw.status === "banned" ? "banned" : "active") as Status,
     createdAt: raw.createdAt || new Date().toISOString(),
@@ -61,6 +64,20 @@ export async function getUserByUsername(username: string): Promise<RawUser | nul
   return id ? getUserById(id) : null;
 }
 
+export async function getUserByEmail(email: string): Promise<RawUser | null> {
+  const lower = (email || "").trim().toLowerCase();
+  if (!lower) return null;
+  const id = await redis<string | null>("GET", K.email(lower));
+  return id ? getUserById(id) : null;
+}
+
+/** True when nobody owns this address; the purchase flow asks before it takes money. */
+export async function emailAvailable(email: string): Promise<boolean> {
+  const lower = (email || "").trim().toLowerCase();
+  if (!lower) return false;
+  return (await redis<string | null>("GET", K.email(lower))) === null;
+}
+
 export async function listUsers(): Promise<UserRecord[]> {
   const ids = await redis<string[]>("SMEMBERS", K.users);
   if (!ids || ids.length === 0) return [];
@@ -77,6 +94,7 @@ interface CreateInput {
   password: string;
   role?: Role;
   createdBy: string;
+  email?: string;
 }
 
 /** Reserves the username atomically, then writes the record. */
@@ -93,12 +111,24 @@ export async function createUserWithHash(input: {
   hash: string;
   role?: Role;
   createdBy: string;
+  email?: string;
 }): Promise<{ user: UserRecord } | { error: string }> {
   const username = input.username.trim();
+  const email = (input.email || "").trim();
+  const emailLower = email.toLowerCase();
   const id = randomUUID();
   // SET ... NX returns "OK" when the name was free and nil when it was taken.
   const reserved = await redis<string | null>("SET", K.username(username.toLowerCase()), id, "NX");
   if (reserved === null || reserved === undefined) return { error: `Username "${username}" sudah dipakai.` };
+  // The address is reserved the same way, and the reservation is released again if the
+  // write below fails, so a half-created account never blocks a real buyer.
+  if (emailLower) {
+    const mailReserved = await redis<string | null>("SET", K.email(emailLower), id, "NX");
+    if (mailReserved === null || mailReserved === undefined) {
+      await redis("DEL", K.username(username.toLowerCase()));
+      return { error: `Email "${email}" sudah terdaftar.` };
+    }
+  }
   const hash = input.hash;
   const now = new Date().toISOString();
   await redisPipeline([
@@ -113,6 +143,8 @@ export async function createUserWithHash(input: {
       "status", "active",
       "createdAt", now,
       "createdBy", input.createdBy,
+      "email", email,
+      "emailLower", emailLower,
       "sessionVersion", "1",
     ],
     ["SADD", K.users, id],
@@ -130,6 +162,21 @@ export async function setPasswordHash(userId: string, hash: string): Promise<boo
   const updated = await redis<number>("HSET", K.user(userId), "passwordHash", hash);
   await bumpSessionVersion(userId);
   return updated >= 0;
+}
+
+/** Owner-side email edit. The uniqueness reservation moves with the address. */
+export async function setEmail(userId: string, email: string): Promise<{ error?: string }> {
+  const current = await getUserById(userId);
+  if (!current) return { error: "User tidak ditemukan." };
+  const trimmed = email.trim();
+  const lower = trimmed.toLowerCase();
+  if (lower && lower !== (current.email || "").toLowerCase()) {
+    const reserved = await redis<string | null>("SET", K.email(lower), userId, "NX");
+    if (reserved === null) return { error: `Email "${trimmed}" sudah terdaftar.` };
+    if (current.email) await redis("DEL", K.email(current.email.toLowerCase()));
+  }
+  await redis("HSET", K.user(userId), "email", trimmed, "emailLower", lower);
+  return {};
 }
 
 export async function setStatus(userId: string, status: Status): Promise<void> {
@@ -159,11 +206,13 @@ export async function renameUser(userId: string, username: string): Promise<{ er
 export async function deleteUser(userId: string): Promise<{ error?: string }> {
   const user = await getUserById(userId);
   if (!user) return { error: "User tidak ditemukan." };
-  await redisPipeline([
+  const commands: (string | number)[][] = [
     ["DEL", K.user(userId)],
     ["DEL", K.username(user.username.toLowerCase())],
     ["SREM", K.users, userId],
-  ]);
+  ];
+  if (user.email) commands.push(["DEL", K.email(user.email.toLowerCase())]);
+  await redisPipeline(commands);
   return {};
 }
 

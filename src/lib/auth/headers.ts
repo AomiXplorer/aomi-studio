@@ -66,6 +66,12 @@ export const PUBLIC_FILES = ["/og-banner.jpg", "/astra.webp"] as const;
 
 export const PUBLIC_PATHS = [
   "/login",
+  // The shop front is reachable before someone has an account: that is the whole point of
+  // it. Payment state is still protected by a per-order token, never by the session.
+  "/buy",
+  "/api/purchase",
+  // The provider signs this call; the handler verifies the signature itself.
+  "/webhook/austinpay",
   "/api/auth/login",
   "/api/auth/logout",
   "/api/health",
