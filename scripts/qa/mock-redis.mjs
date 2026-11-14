@@ -86,7 +86,8 @@ function run(args) {
       const exIndex = options.indexOf("EX");
       if (nx && alive(key)) return null;
       store.set(key, { kind: "string", value: String(args[2] ?? "") });
-      if (exIndex >= 0) setTtl(key, args[3 + exIndex]);
+      // sliced index i maps to args index i + 3, so the TTL value sits at i + 4
+      if (exIndex >= 0) setTtl(key, args[4 + exIndex]);
       return "OK";
     }
     case "GET":
