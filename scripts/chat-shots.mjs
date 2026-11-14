@@ -115,6 +115,56 @@ await shoot("03-chat-mobile-dark", 390, 844, "dark");
 await shoot("04-chat-small-dark", 360, 780, "dark");
 await shoot("05-chat-320-dark", 320, 720, "dark");
 
+// Interaction pass: the project switcher, its keyboard escape and the new-project dialog.
+if (process.argv.includes("--interact")) {
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
+  await page.goto(`${BASE}/chat`, { waitUntil: "networkidle2" });
+  await new Promise((resolve) => setTimeout(resolve, 800));
+
+  await page.click('[aria-haspopup="listbox"]');
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  const opened = await page.evaluate(() => {
+    const list = document.querySelector('[role="listbox"]');
+    return {
+      open: Boolean(list),
+      options: list ? list.querySelectorAll('[role="option"]').length : 0,
+      fitsViewport: list ? list.getBoundingClientRect().right <= window.innerWidth && list.getBoundingClientRect().left >= 0 : false,
+    };
+  });
+  console.log("switcher open", JSON.stringify(opened));
+
+  await page.keyboard.press("Escape");
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  console.log("closes on escape", await page.evaluate(() => !document.querySelector('[role="listbox"]')));
+
+  await page.click('[aria-haspopup="listbox"]');
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  await page.evaluate(() => {
+    const buttons = [...document.querySelectorAll('[role="listbox"] button')];
+    buttons.find((button) => button.textContent.includes("Project baru"))?.click();
+  });
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const dialog = await page.evaluate(() => {
+    const input = document.querySelector('input[placeholder="Portfolio programmer"]');
+    const card = input ? input.closest("div[class*='rounded-xl']") : null;
+    const rect = card ? card.getBoundingClientRect() : null;
+    return { open: Boolean(input), inside: rect ? rect.left >= 0 && rect.right <= window.innerWidth : false };
+  });
+  console.log("new project dialog", JSON.stringify(dialog));
+  await page.keyboard.press("Escape");
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  const cards = await page.evaluate(() =>
+    [...document.querySelectorAll("ul li button")].slice(0, 4).map((button) => ({
+      label: button.textContent.replace(/\s+/g, " ").trim().slice(0, 34),
+      enabled: !button.disabled,
+      height: Math.round(button.getBoundingClientRect().height),
+    })),
+  );
+  console.log("cards", JSON.stringify(cards));
+  await page.screenshot({ path: `${OUT}/06-mobile-switcher.png` });
+}
+
 // Theme is left on dark for the app it ships in.
 await page.evaluate(() => window.localStorage.setItem("aomi:theme", "dark"));
 await browser.close();
