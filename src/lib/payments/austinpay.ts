@@ -121,12 +121,16 @@ async function call<T>(options: CallOptions): Promise<T> {
     || (payload as { error?: string } | null)?.error
     || "";
 
+  // The provider's own wording goes on the end: "IP not whitelisted" and "account
+  // suspended" are both 403s, and the difference decides what the owner has to do.
+  const providerNote = fail ? ` (AustinPay: ${fail})` : "";
+
   if (response.status === 401) {
-    throw new AustinPayError("API key AustinPay ditolak. Periksa AUSTIN_API_KEY dan signature.", 502, "unauthorized");
+    throw new AustinPayError(`API key AustinPay ditolak. Periksa AUSTIN_API_KEY dan signature.${providerNote}`, 502, "unauthorized");
   }
   if (response.status === 403) {
     throw new AustinPayError(
-      "AustinPay menolak request: akun diblokir atau IP server tidak ada di whitelist. Tambahkan IP keluar server ke Whitelist IP di dashboard AustinPay.",
+      `AustinPay menolak request dari server ini: akun diblokir atau IP keluar belum ada di Whitelist IP.${providerNote}`,
       502,
       "forbidden",
     );
