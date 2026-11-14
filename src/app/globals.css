@@ -623,17 +623,17 @@
 }
 
 /* Route change: fade and a short lift, never a jump. */
+/* Opacity only: a transform here would make every page wrapper a containing block for
+   fixed-position dialogs and sheets, which is how the model sheet ended up misdrawn. */
 .aomi-page {
-  animation: aomi-page 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: aomi-page 360ms ease-out both;
 }
 
 @keyframes aomi-page {
   from {
     opacity: 0;
-    transform: translate3d(0, 6px, 0);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
