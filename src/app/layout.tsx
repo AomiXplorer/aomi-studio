@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/shell/AppShell";
+import { readSiteMeta } from "@/lib/db/settings";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -17,40 +18,44 @@ const jetbrains = JetBrains_Mono({
 });
 
 const siteUrl = (process.env.AOMI_PUBLIC_URL || "https://vierraapi.my.id").replace(/\/+$/, "");
-const shareTitle = "Aomi Studio — AI agent × Astra";
-const shareDescription =
-  "Tulis permintaan, agent menulis file, menjalankan perintah, dan menyerahkan project yang bisa diunduh.";
 
-export const metadata: Metadata = {
-  title: "Aomi — AI Coding Agent",
-  description: shareDescription,
-  metadataBase: new URL(siteUrl),
-  // The app is private: nothing here belongs in a search index. Link previews still work.
-  robots: { index: false, follow: false, nocache: true },
-  openGraph: {
-    type: "website",
-    url: siteUrl,
-    siteName: "Aomi Studio",
-    locale: "id_ID",
-    title: shareTitle,
-    description: shareDescription,
-    images: [
-      {
-        url: `${siteUrl}/og-banner.jpg`,
-        width: 1200,
-        height: 630,
-        alt: "Aomi Studio — AI agent × Astra",
-        type: "image/jpeg",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: shareTitle,
-    description: shareDescription,
-    images: [`${siteUrl}/og-banner.jpg`],
-  },
-};
+/**
+ * The title and description are read per request, so the owner can change what a shared
+ * link says from the Telegram console without a redeploy.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const meta = await readSiteMeta();
+  return {
+    title: meta.title,
+    description: meta.description,
+    metadataBase: new URL(siteUrl),
+    // The app is private: nothing here belongs in a search index. Link previews still work.
+    robots: { index: false, follow: false, nocache: true },
+    openGraph: {
+      type: "website",
+      url: siteUrl,
+      siteName: "Aomi Studio",
+      locale: "id_ID",
+      title: meta.title,
+      description: meta.description,
+      images: [
+        {
+          url: `${siteUrl}/og-banner.jpg`,
+          width: 1200,
+          height: 630,
+          alt: meta.title,
+          type: "image/jpeg",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: meta.title,
+      description: meta.description,
+      images: [`${siteUrl}/og-banner.jpg`],
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [

@@ -11,6 +11,7 @@ import { addSealedApiKey, decryptKey, deleteApiKey, getApiKey, listApiKeys, reco
 import { createBackup, listBackupFiles } from "@/lib/db/backup";
 import { audit } from "@/lib/db/audit";
 import { PANEL_URL } from "@/lib/db/keys";
+import { readSiteMeta, writeSettings, SITE_META_DEFAULTS } from "@/lib/db/settings";
 import { purgeUserProjects } from "@/lib/db/projects";
 import { hashPasswordForFlow, usernameProblem as usernameProblemFn } from "./validate";
 import { sealSecret, maskSecret, fingerprint } from "@/lib/crypto/secrets";
@@ -101,6 +102,41 @@ async function runCommand(chatId: ChatId, text: string): Promise<void> {
         ]),
         [[{ text: providerName(), callback_data: "f:provider:default" }], [{ text: "Cancel", callback_data: "f:no" }]],
       );
+      return;
+    }
+    case "/meta": {
+      const screen = await S.siteMetaScreen();
+      await sendMessage(chatId, screen.text, screen.keyboard);
+      return;
+    }
+    case "/settitle": {
+      const value = cleanMeta(args.join(" "));
+      if (!value) {
+        await clearFlow(chatId);
+        await writeFlow(chatId, { kind: "sitemeta", field: "title" });
+        await sendMessage(
+          chatId,
+          card(["<b>New link title</b>", RULE, "Send the title to use, 3-80 characters.", "Example: Aomi Studio — AI agent untuk bikin project"]),
+          [[{ text: "Cancel", callback_data: "f:no" }]],
+        );
+        return;
+      }
+      await saveSiteMeta(chatId, "title", value);
+      return;
+    }
+    case "/setdesc": {
+      const value = cleanMeta(args.join(" "));
+      if (!value) {
+        await clearFlow(chatId);
+        await writeFlow(chatId, { kind: "sitemeta", field: "description" });
+        await sendMessage(
+          chatId,
+          card(["<b>New link description</b>", RULE, "Send the description to use, 10-200 characters.", "Example: Agent AI yang menulis file dan menyerahkan project siap unduh."]),
+          [[{ text: "Cancel", callback_data: "f:no" }]],
+        );
+        return;
+      }
+      await saveSiteMeta(chatId, "description", value);
       return;
     }
     case "/listtoken": {
@@ -373,7 +409,48 @@ async function startPasswordReset(chatId: ChatId, user: RawUser): Promise<void> 
 
 /* ---------------------------------- flows --------------------------------- */
 
+/** A share title is one line: newlines and runs of spaces are collapsed before saving. */
+function cleanMeta(raw: string): string {
+  return raw.replace(/\s+/g, " ").trim();
+}
+
+const META_LIMITS = { title: { min: 3, max: 80 }, description: { min: 10, max: 200 } } as const;
+
+async function saveSiteMeta(chatId: ChatId, field: "title" | "description", raw: string): Promise<void> {
+  const value = cleanMeta(raw);
+  const limit = META_LIMITS[field];
+  if (value.length < limit.min || value.length > limit.max) {
+    await sendMessage(
+      chatId,
+      card([
+        `<b>Not saved</b>`,
+        RULE,
+        `The ${field} must be ${limit.min}-${limit.max} characters. Yours is ${value.length}.`,
+        "Send another one, or /cancel.",
+      ]),
+      [[{ text: "Cancel", callback_data: "f:no" }]],
+    );
+    return;
+  }
+  await writeSettings(field === "title" ? { siteTitle: value } : { siteDescription: value }, `telegram:${chatId}`);
+  await audit({
+    actorType: "telegram",
+    actorId: String(chatId),
+    action: "site.meta",
+    target: field,
+    detail: `${value.length} chars`,
+  });
+  await clearFlow(chatId);
+  await sendMessage(chatId, card([`<b>Saved</b>`, RULE, `The link ${field} is now:`, esc(value)]));
+  const screen = await S.siteMetaScreen();
+  await sendMessage(chatId, screen.text, screen.keyboard);
+}
+
 async function handleFlowInput(chatId: ChatId, flow: Flow, text: string): Promise<void> {
+  if (flow.kind === "sitemeta") {
+    await saveSiteMeta(chatId, flow.field, text);
+    return;
+  }
   if (flow.kind === "adduser") {
     if (flow.step === "username") {
       const problem = usernameProblemFn(text);
@@ -531,6 +608,7 @@ async function sendConfirmKey(chatId: ChatId, flow: Extract<Flow, { kind: "addto
 }
 
 async function finalizeFlow(chatId: ChatId, flow: Flow): Promise<void> {
+  if (flow.kind === "sitemeta") return;
   if (flow.kind === "adduser" && flow.step === "confirm" && flow.username && flow.hash) {
     const created = await createUserWithHash({ username: flow.username, hash: flow.hash, role: "user", createdBy: `telegram:${chatId}` });
     await clearFlow(chatId);
@@ -656,6 +734,30 @@ async function handleCallback(cb: NonNullable<Update["callback_query"]>): Promis
       if (!flow || flow.kind !== "addtoken") return render("That conversation expired.", S.mainMenu());
       await writeFlow(chatId, { ...flow, step: "key", provider: providerName() });
       return render(card(["<b>Step 2 of 3</b>", RULE, "Send the API key. It is encrypted immediately and never shown again in full."]));
+    }
+    return;
+  }
+
+  if (scope === "sm") {
+    if (action === "title" || action === "desc") {
+      const field = action === "title" ? "title" : "description";
+      await clearFlow(chatId);
+      await writeFlow(chatId, { kind: "sitemeta", field });
+      return render(
+        card(
+          field === "title"
+            ? ["<b>New link title</b>", RULE, "Send the title to use, 3-80 characters."]
+            : ["<b>New link description</b>", RULE, "Send the description to use, 10-200 characters."],
+        ),
+        [[{ text: "Cancel", callback_data: "f:no" }]],
+      );
+    }
+    if (action === "reset") {
+      await clearFlow(chatId);
+      await writeSettings({ siteTitle: SITE_META_DEFAULTS.title, siteDescription: SITE_META_DEFAULTS.description }, `telegram:${chatId}`);
+      await audit({ actorType: "telegram", actorId: String(chatId), action: "site.meta", target: "defaults", detail: "title and description reset" });
+      const screen = await S.siteMetaScreen();
+      return render(screen.text, screen.keyboard);
     }
     return;
   }

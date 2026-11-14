@@ -11,7 +11,7 @@ import { systemCounters } from "@/lib/db/projects";
 import { backupStatus } from "@/lib/db/backup";
 import { redisPing, redisConfigured } from "@/lib/db/redis";
 import { encryptionReady } from "@/lib/crypto/secrets";
-import { readSettings } from "@/lib/db/settings";
+import { readSettings, readSiteMeta } from "@/lib/db/settings";
 import type { InlineButton } from "./api";
 import { card, esc, when, ago, shortId, RULE } from "./ui";
 
@@ -42,6 +42,32 @@ export function welcome(botName: string): string {
   ]);
 }
 
+export async function siteMetaScreen(): Promise<{ text: string; keyboard: InlineButton[][] }> {
+  const meta = await readSiteMeta();
+  return {
+    text: card([
+      "<b>Share title and description</b>",
+      RULE,
+      `<b>Title</b> · ${meta.title.length} chars`,
+      esc(meta.title),
+      "",
+      `<b>Description</b> · ${meta.description.length} chars`,
+      esc(meta.description),
+      RULE,
+      meta.isDefault
+        ? "In use: built-in defaults."
+        : `Changed ${when(meta.updatedAt)} by ${esc(meta.updatedBy || "unknown")}.`,
+      "This is what a shared link shows in WhatsApp and every other preview.",
+    ]),
+    keyboard: [
+      [{ text: "Edit title", callback_data: "sm:title" }],
+      [{ text: "Edit description", callback_data: "sm:desc" }],
+      [{ text: "Reset to defaults", callback_data: "sm:reset" }],
+      [{ text: "Menu", callback_data: "m:menu" }],
+    ],
+  };
+}
+
 export function help(): string {
   return card([
     "<b>Commands</b>",
@@ -56,6 +82,9 @@ export function help(): string {
     RULE,
     "<b>System</b>",
     "/stats · /database · /userstats · /backup · /backupstatus · /audit",
+    RULE,
+    "<b>Site text</b>",
+    "/meta · /settitle · /setdesc",
     RULE,
     "<code>/cancel</code> stops any question that is waiting for an answer.",
   ]);

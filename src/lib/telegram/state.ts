@@ -14,6 +14,7 @@ import type { Role } from "@/lib/db/users";
 const TTL = 600;
 
 export type Flow =
+  | { kind: "sitemeta"; field: "title" | "description" }
   | { kind: "adduser"; step: "username" | "password" | "confirm"; username?: string; hash?: string; role?: Role }
   | { kind: "resetpassword"; step: "password" | "confirm"; userId: string; username: string; hash?: string }
   | { kind: "renameuser"; step: "username"; userId: string }
