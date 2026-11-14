@@ -120,7 +120,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               height={563}
               priority
               sizes="300px"
-              className="h-full w-full select-none object-cover object-top opacity-85 grayscale"
+              className="h-full w-full select-none object-cover object-top grayscale"
             />
             <span
               aria-hidden

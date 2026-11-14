@@ -24,7 +24,9 @@ const meta = await sharp(source).metadata();
 await sharp(source)
   .rotate()
   .resize({ width: Math.min(900, meta.width ?? 900), withoutEnlargement: true })
-  .webp({ quality: 72, effort: 5 })
+  // The artwork is a dark drawing on a dark page; a small lift keeps it readable at rail size.
+  .linear(1.12, 6)
+  .webp({ quality: 74, effort: 5 })
   .toFile("public/astra.webp");
 
 // 2. Share card. The art sits in the right 520px and fades into the canvas so the
