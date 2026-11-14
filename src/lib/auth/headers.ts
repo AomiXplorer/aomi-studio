@@ -77,6 +77,9 @@ export const PUBLIC_PATHS = [
   "/api/health",
   "/api/telegram/webhook",
   "/api/cron/backup",
+  // Ops probe: the handler compares an OPS_TOKEN in constant time and fails closed without
+  // it, because the proxy has no way to read a bearer token.
+  "/api/ops/provider",
 ] as const;
 
 export function isPublicPath(pathname: string): boolean {
