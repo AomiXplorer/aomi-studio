@@ -12,6 +12,7 @@ import { backupStatus } from "@/lib/db/backup";
 import { redisPing, redisConfigured } from "@/lib/db/redis";
 import { encryptionReady } from "@/lib/crypto/secrets";
 import { readSettings, readSiteMeta } from "@/lib/db/settings";
+import { PANEL_URL } from "@/lib/db/keys";
 import type { InlineButton } from "./api";
 import { card, esc, when, ago, shortId, RULE } from "./ui";
 
@@ -44,6 +45,9 @@ export function welcome(botName: string): string {
 
 export async function siteMetaScreen(): Promise<{ text: string; keyboard: InlineButton[][] }> {
   const meta = await readSiteMeta();
+  // WhatsApp keeps one cached preview per exact address. Bumping the version after every
+  // edit is what makes the next share show the text that is live right now.
+  const version = meta.updatedAt ? new Date(meta.updatedAt).getTime().toString(36) : "1";
   return {
     text: card([
       "<b>Share title and description</b>",
@@ -58,6 +62,10 @@ export async function siteMetaScreen(): Promise<{ text: string; keyboard: Inline
         ? "In use: built-in defaults."
         : `Changed ${when(meta.updatedAt)} by ${esc(meta.updatedBy || "unknown")}.`,
       "This is what a shared link shows in WhatsApp and every other preview.",
+      RULE,
+      "<b>Share link</b> (fresh, use this exact one)",
+      `<code>${PANEL_URL}/login?v=${version}</code>`,
+      "A preview is cached per address, so the version suffix is what forces the new text and image to appear.",
     ]),
     keyboard: [
       [{ text: "Edit title", callback_data: "sm:title" }],
