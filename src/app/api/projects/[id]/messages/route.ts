@@ -1,7 +1,7 @@
-import { getMessages } from "@/lib/workspace/service";
+import { getMessages, replaceMessages } from "@/lib/workspace/service";
 import { json, serverError } from "@/lib/api";
 import { requireProject } from "@/lib/db/guard";
-import { getMessages as getCloudMessages } from "@/lib/db/projects";
+import { clearMessages, getMessages as getCloudMessages } from "@/lib/db/projects";
 import { redisConfigured } from "@/lib/db/redis";
 
 export const runtime = "nodejs";
@@ -35,6 +35,24 @@ export async function GET(request: Request, { params }: Params) {
       return json({ messages, source: "database" });
     }
     return json({ messages: [], source: "workspace" });
+  } catch (error) {
+    return serverError(error);
+  }
+}
+
+/**
+ * Deletes the conversation only. Files, assets and the project itself are untouched, and
+ * the route still answers only for a project the caller owns.
+ */
+export async function DELETE(_request: Request, { params }: Params) {
+  const { id } = await params;
+  const gate = await requireProject(id);
+  if (gate.error) return gate.error;
+
+  try {
+    await replaceMessages(id, []);
+    if (redisConfigured()) await clearMessages(id);
+    return json({ ok: true });
   } catch (error) {
     return serverError(error);
   }

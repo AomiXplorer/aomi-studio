@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, ArrowUpRight, FileCode2, X } from "lucide-react";
-import { Badge, Dot } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Field";
 import { Spinner } from "@/components/ui/Spinner";
@@ -13,6 +13,7 @@ import { StatusRail } from "./StatusRail";
 import { Composer, type PendingAttachment } from "./Composer";
 import { ChatHeader } from "./ChatHeader";
 import { EmptyState } from "./EmptyState";
+import { Maintenance } from "./Maintenance";
 import { ModelPicker } from "./ModelPicker";
 import { api, streamChat } from "@/lib/client/api";
 import { downloadProjectZip } from "@/lib/client/download";
@@ -53,7 +54,9 @@ export function ChatView() {
   const [newName, setNewName] = useState("");
   const [newTemplate, setNewTemplate] = useState("nextjs");
   const [creating, setCreating] = useState(false);
-  const [sessionBilled, setSessionBilled] = useState(0);
+  const [quotaOut, setQuotaOut] = useState(false);
+  const [quotaNote, setQuotaNote] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -112,6 +115,14 @@ export function ChatView() {
         if (initial) {
           setActiveId(initial.id);
           await loadMessages(initial.id);
+        }
+
+        const quota = await fetch("/api/quota", { cache: "no-store" })
+          .then((response) => (response.ok ? response.json() : null))
+          .catch(() => null);
+        if (!cancelled && quota?.exhausted) {
+          setQuotaOut(true);
+          setQuotaNote(quota.detail || null);
         }
       } catch (loadError) {
         setError((loadError as Error).message);
@@ -189,10 +200,16 @@ export function ChatView() {
         const next = current.filter((change) => change.path !== event.change.path);
         return [...next, event.change];
       });
-    } else if (event.type === "usage") {
-      setSessionBilled((value) => value + event.usage.billedTokens);
     } else if (event.type === "error") {
-      setError(event.message);
+      // Out of provider credit is not an error the visitor can act on: it becomes the
+      // maintenance line, and the server has already told the owner.
+      if ((event as { code?: string }).code === "QUOTA_EXHAUSTED") {
+        setQuotaOut(true);
+        setQuotaNote(event.message || null);
+        setError(null);
+      } else {
+        setError(event.message);
+      }
     }
   };
 
@@ -293,6 +310,21 @@ export function ChatView() {
     }
   };
 
+  const clearHistory = async () => {
+    if (!activeProject) return;
+    setClearing(true);
+    try {
+      await api.messages.remove(activeProject.id);
+      setMessages([]);
+      setChanges([]);
+      setError(null);
+    } catch (clearError) {
+      setError((clearError as Error).message);
+    } finally {
+      setClearing(false);
+    }
+  };
+
   const textModels = models.filter((item) => item.kind === "text");
 
   return (
@@ -303,6 +335,9 @@ export function ChatView() {
         activeProject={activeProject}
         onSelect={(id) => void selectProject(id)}
         onNew={() => setShowNew(true)}
+        canClear={messages.length > 0}
+        clearing={clearing}
+        onClear={() => void clearHistory()}
         onZip={() => {
           if (!activeProject) return;
           downloadProjectZip(activeProject.id, activeProject.name).catch((error: Error) => setError(error.message));
@@ -329,6 +364,8 @@ export function ChatView() {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-[720px] px-4 py-5 sm:px-6 sm:py-7">
+          {quotaOut ? <Maintenance note={quotaNote ?? undefined} /> : null}
+
           {loading ? (
             <div className="flex items-center gap-2 text-[13px] text-muted">
               <Spinner /> Memuat workspace...
@@ -391,11 +428,6 @@ export function ChatView() {
         <div className="mx-auto w-full max-w-[720px]">
           <StatusRail status={status} detail={statusDetail} />
         </div>
-        {sessionBilled > 0 ? (
-          <div className="flex items-center gap-2 px-4 pb-1 pl-6 pt-0.5 text-[11px] text-faint sm:px-6">
-            <Dot tone="neutral" /> Sesi ini: {formatNumber(sessionBilled)} token ditagihkan provider
-          </div>
-        ) : null}
       </div>
 
       <Composer
@@ -416,8 +448,14 @@ export function ChatView() {
         onAttach={(file) => void attach(file)}
         onRemoveAttachment={(path) => setAttachments((current) => current.filter((file) => file.path !== path))}
         uploading={uploading}
-        disabled={loading}
-        placeholder={activeProject ? `Minta Aomi mengerjakan sesuatu di "${activeProject.name}"...` : "Buat project dulu untuk mulai..."}
+        disabled={loading || quotaOut}
+        placeholder={
+          quotaOut
+            ? "Web Under maintenance."
+            : activeProject
+              ? `Minta Aomi mengerjakan sesuatu di "${activeProject.name}"...`
+              : "Buat project dulu untuk mulai..."
+        }
       />
 
       {showNew ? (

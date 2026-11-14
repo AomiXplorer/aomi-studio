@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronDown, Download, FolderClosed, FolderOpen, Plus } from "lucide-react";
+import { Check, ChevronDown, Download, FolderClosed, FolderOpen, Plus, Trash2 } from "lucide-react";
 import type { ProjectMeta } from "@/lib/workspace/service";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,9 @@ export function ChatHeader({
   onSelect,
   onNew,
   onZip,
+  onClear,
+  canClear,
+  clearing,
 }: {
   projects: ProjectMeta[];
   activeId: string | null;
@@ -25,17 +28,26 @@ export function ChatHeader({
   onSelect: (id: string) => void;
   onNew: () => void;
   onZip: () => void;
+  onClear: () => void;
+  canClear: boolean;
+  clearing?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const confirmRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open && !confirm) return;
     const onPointer = (event: PointerEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (!wrapRef.current?.contains(target)) setOpen(false);
+      if (!confirmRef.current?.contains(target)) setConfirm(false);
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      setConfirm(false);
     };
     window.addEventListener("pointerdown", onPointer);
     window.addEventListener("keydown", onKey);
@@ -43,7 +55,7 @@ export function ChatHeader({
       window.removeEventListener("pointerdown", onPointer);
       window.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, confirm]);
 
   const action = "inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-[12.5px] text-muted transition-colors duration-150 hover:bg-surface hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
 
@@ -126,6 +138,49 @@ export function ChatHeader({
               <Download className="size-3.5" aria-hidden />
               <span className="hidden sm:inline">ZIP</span>
             </button>
+            <div className="relative" ref={confirmRef}>
+              <button
+                type="button"
+                onClick={() => setConfirm((value) => !value)}
+                disabled={!canClear || clearing}
+                className={cn(action, "disabled:opacity-40")}
+                aria-haspopup="dialog"
+                aria-expanded={confirm}
+                aria-label="Hapus riwayat percakapan"
+                title="Hapus riwayat"
+              >
+                <Trash2 className="size-3.5" aria-hidden />
+              </button>
+              {confirm ? (
+                <div
+                  role="dialog"
+                  aria-label="Hapus riwayat percakapan"
+                  className="absolute right-0 top-[calc(100%+6px)] z-30 w-[min(268px,calc(100vw-1.5rem))] rounded-xl border border-line bg-panel/95 p-3 shadow-[0_24px_48px_-24px_rgb(0_0_0/0.6)] backdrop-blur-xl"
+                >
+                  <p className="text-[12.5px] font-medium text-ink">Hapus riwayat chat?</p>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-muted">Semua pesan di project ini dihapus. File dan project tetap ada.</p>
+                  <div className="mt-3 flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setConfirm(false)}
+                      className="h-7 rounded-md px-2 text-[12px] text-muted transition-colors hover:bg-surface hover:text-ink"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConfirm(false);
+                        onClear();
+                      }}
+                      className="h-7 rounded-md bg-danger/15 px-2.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/25"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </>
         ) : null}
       </div>

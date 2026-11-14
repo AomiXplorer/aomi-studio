@@ -1,4 +1,5 @@
 import { aiConfig, providerKeyConfigured } from "./config";
+import { brandLabel } from "./labels";
 import {
   ChatRequest,
   ChatResult,
@@ -113,14 +114,14 @@ export async function listModels(force = false): Promise<ProviderModel[]> {
     const kind = meta.kind === "image" ? "image" : meta.kind === "audio" ? "audio" : "text";
     return {
       id: raw.id,
-      label: raw.display_name || raw.id,
-      family: meta.family || "Unknown",
+      label: brandLabel(raw.display_name || raw.id),
+      family: brandLabel(meta.family || "Unknown"),
       kind,
       vision: Boolean(meta.vision),
       tier: meta.tier ?? null,
       isDefault: Boolean(meta.default),
       endpoint: meta.endpoint ?? null,
-      note: meta.description || meta.tagline || null,
+      note: meta.description || meta.tagline ? brandLabel(meta.description || meta.tagline || "") : null,
     };
   });
   modelCache = { at: Date.now(), models };

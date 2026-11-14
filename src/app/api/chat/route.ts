@@ -19,6 +19,7 @@ import { errorResponse, parseBody, serverError } from "@/lib/api";
 import { requireProject } from "@/lib/db/guard";
 import { mirrorMessage } from "@/lib/db/projects";
 import { redisConfigured } from "@/lib/db/redis";
+import { clearQuota, isQuotaError, markQuotaExhausted } from "@/lib/ai/quota";
 
 export const runtime = "nodejs";
 // Vercel rejects values above 60 for this plan tier (verified by deploy), so the
@@ -213,19 +214,28 @@ export async function POST(request: Request) {
           } else {
             await appendMessage(projectId, assistant);
             if (redisConfigured()) await mirrorMessage(projectId, ownerId, assistant).catch(() => undefined);
+            await clearQuota().catch(() => undefined);
             send({ type: "assistant_saved", message: assistant });
           }
           if (result.paused) send({ type: "turn_paused", note: "Batas waktu permintaan tercapai, pekerjaan dilanjutkan otomatis." } as AgentEvent);
         } catch (error) {
+          const outOfCredit = isQuotaError(error);
+          if (outOfCredit) await markQuotaExhausted((error as Error).message).catch(() => undefined);
           const failure: StoredMessage = {
             id: newId(),
             role: "assistant",
-            content: `Gagal menjalankan agent: ${(error as Error).message}`,
+            content: outOfCredit
+              ? "Web Under maintenance."
+              : `Gagal menjalankan agent: ${(error as Error).message}`,
             createdAt: new Date().toISOString(),
             status: "failed",
           };
           await appendMessage(projectId, failure).catch(() => undefined);
-          send({ type: "error", message: (error as Error).message, code: (error as { code?: string }).code });
+          if (outOfCredit) {
+            send({ type: "error", message: "Web Under maintenance.", code: "QUOTA_EXHAUSTED" });
+          } else {
+            send({ type: "error", message: (error as Error).message, code: (error as { code?: string }).code });
+          }
           send({ type: "done", status: "failed" });
         } finally {
           if (session) {

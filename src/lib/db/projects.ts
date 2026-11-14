@@ -155,6 +155,11 @@ export async function getMessages(projectId: string, limit = 60): Promise<CloudM
     .filter((row): row is CloudMessage => Boolean(row));
 }
 
+/** Removes the stored conversation of one project. The project and its files stay. */
+export async function clearMessages(projectId: string): Promise<void> {
+  await redis("DEL", K.projectMessages(projectId));
+}
+
 export async function deleteProject(projectId: string, ownerId: string): Promise<void> {
   await redisPipeline([
     ["DEL", K.project(projectId)],

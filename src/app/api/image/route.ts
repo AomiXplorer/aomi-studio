@@ -5,6 +5,7 @@ import { aiConfig, providerKeyConfigured } from "@/lib/ai/config";
 import { getProject, newId, saveAsset } from "@/lib/workspace/service";
 import { clientKey, rateLimit } from "@/lib/services/rate-limit";
 import { errorResponse, json, parseBody, serverError } from "@/lib/api";
+import { isQuotaError, markQuotaExhausted } from "@/lib/ai/quota";
 import { requireSession } from "@/lib/auth/require";
 
 export const runtime = "nodejs";
@@ -53,6 +54,10 @@ export async function POST(request: Request) {
     }
     return json({ dataUrl: result.dataUrl, model: result.model, revisedPrompt: result.revisedPrompt, asset });
   } catch (error) {
+    if (isQuotaError(error)) {
+      await markQuotaExhausted((error as Error).message).catch(() => undefined);
+      return errorResponse("Web Under maintenance.", 503, { code: "QUOTA_EXHAUSTED" });
+    }
     return serverError(error);
   }
 }

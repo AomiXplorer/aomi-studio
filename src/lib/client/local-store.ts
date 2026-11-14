@@ -188,6 +188,9 @@ export const local = {
     set(id: string, messages: StoredMessage[]): void {
       writeJson(messagesKey(id), messages.slice(-200));
     },
+    clear(id: string): void {
+      window.localStorage.removeItem(messagesKey(id));
+    },
     append(id: string, message: StoredMessage): void {
       const messages = this.list(id).filter((entry) => entry.id !== message.id);
       messages.push(message);

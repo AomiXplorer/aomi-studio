@@ -199,6 +199,11 @@ export const api = {
       }
       return request<{ messages: StoredMessage[] }>(`/api/projects/${id}/messages`);
     },
+    remove: async (id: string) => {
+      const result = await request<{ ok: boolean }>(`/api/projects/${id}/messages`, { method: "DELETE" });
+      if (await isClientStorage()) local.messages.clear(id);
+      return result;
+    },
   },
   assets: {
     list: async (id: string) => {
