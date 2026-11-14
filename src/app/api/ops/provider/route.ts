@@ -12,7 +12,7 @@
  */
 import { timingSafeEqual } from "node:crypto";
 import { errorResponse, json } from "@/lib/api";
-import { accountInfo, austinConfigState, AustinPayError } from "@/lib/payments/austinpay";
+import { accountInfo, austinConfigState, AustinPayError, cancelDeposit, createDeposit } from "@/lib/payments/austinpay";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,6 +60,33 @@ export async function GET(request: Request) {
       { ok: false, egress, provider: { reachable: false, missing: state.missing, message: "Kredensial provider belum lengkap." } },
       { status: 503 },
     );
+  }
+
+  // ?action=deposit proves the half that matters: a real QRIS, then cancelled immediately so
+  // nothing is left payable. Two provider calls, no money moved, nothing provisioned.
+  if (new URL(request.url).searchParams.get("action") === "deposit") {
+    try {
+      const deposit = await createDeposit(25_000);
+      const cancelled = await cancelDeposit(deposit.transactionId);
+      return json({
+        ok: cancelled.ok,
+        egress,
+        deposit: {
+          transactionId: deposit.transactionId,
+          amount: deposit.amount,
+          baseAmount: deposit.baseAmount,
+          feePayer: deposit.feePayer,
+          status: deposit.status,
+          expiredAt: deposit.expiredAt,
+          qrImage: deposit.qrImage ? `${deposit.qrImage.slice(0, 32)}… (${deposit.qrImage.length} chars)` : "KOSONG",
+          qrString: deposit.qrString ? `ada (${deposit.qrString.length} chars)` : "KOSONG",
+        },
+        afterCancel: { status: cancelled.status, message: cancelled.message },
+      });
+    } catch (error) {
+      const message = error instanceof AustinPayError ? error.message : "Gagal membuat deposit.";
+      return json({ ok: false, egress, message }, { status: 502 });
+    }
   }
 
   try {
