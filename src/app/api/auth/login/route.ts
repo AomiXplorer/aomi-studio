@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
   const secret = sessionSecret();
   if (!secret) {
-    return withSecurityHeaders(errorResponse("Login belum dikonfigurasi di server.", 503));
+    return withSecurityHeaders(errorResponse("Sign-in is not configured on this server.", 503));
   }
 
   const ipKey = `login:ip:${hashIdentifier(requestIp(request))}`;
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   const state = await loadAuthConfig();
   if (!state.config) {
     // Never pretend a wrong password when the server simply has no credential source.
-    return withSecurityHeaders(errorResponse("Kredensial owner belum tersedia di server. Hubungi owner lewat WhatsApp.", 503));
+    return withSecurityHeaders(errorResponse("The owner credentials are not available on this server. Contact the owner on WhatsApp.", 503));
   }
 
   const user = findUser(state.config, username);
