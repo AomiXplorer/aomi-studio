@@ -250,7 +250,8 @@ export async function accountInfo(): Promise<{ username: string; email: string; 
  */
 export function verifyWebhookSignature(rawBody: string, signatureHeader: string | null, secret: string): boolean {
   if (!secret || !signatureHeader) return false;
-  const received = signatureHeader.trim().toLowerCase();
+  // Providers differ on the prefix (bare hex, `sha256=`, `t=..,v1=..` is not accepted).
+  const received = signatureHeader.trim().toLowerCase().replace(/^sha256=/, "");
   if (!/^[0-9a-f]{64}$/.test(received)) return false;
   const expected = createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
   // Both sides are fixed-length hex, so a constant-time compare leaks nothing useful.
