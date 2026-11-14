@@ -1,7 +1,7 @@
 // Security regression suite for the login gate: every assertion below hits a real
 // server, so a passing run means the protection is actually wired, not described.
 //
-//   node scripts/auth-check.mjs http://127.0.0.1:3130 "REDACTED"
+//   AOMI_OWNER_PASSWORD="…" node scripts/auth-check.mjs http://127.0.0.1:3130 "$AOMI_OWNER_PASSWORD"
 //
 // The password argument is only used to prove a correct login works and that it never
 // reaches a client bundle. Nothing is written to disk.
@@ -10,7 +10,8 @@ import path from "node:path";
 import puppeteer from "puppeteer-core";
 
 const BASE = process.argv[2] || "http://127.0.0.1:3130";
-const PASSWORD = process.argv[3];
+// The password is passed in at run time and never written into this file.
+const PASSWORD = process.argv[3] || process.env.AOMI_OWNER_PASSWORD;
 const OWNER = process.argv[4] || "Aomixplorer";
 if (!PASSWORD) {
   console.error("usage: node scripts/auth-check.mjs <base> <owner-password> [username]");
