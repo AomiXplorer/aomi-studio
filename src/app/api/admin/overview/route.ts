@@ -6,6 +6,7 @@
  */
 import { json, serverError } from "@/lib/api";
 import { requireAdmin } from "@/lib/auth/require";
+import { ensureOwnerAccount } from "@/lib/auth/accounts";
 import { listUsers, userStats } from "@/lib/db/users";
 import { listApiKeys } from "@/lib/db/apikeys";
 import { listAudit } from "@/lib/db/audit";
@@ -23,6 +24,7 @@ export async function GET() {
   if (gate.error) return gate.error;
 
   try {
+    await ensureOwnerAccount();
     const [users, keys, audit, counters, backup, settings, ping] = await Promise.all([
       listUsers(),
       listApiKeys(),

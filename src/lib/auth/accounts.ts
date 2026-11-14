@@ -109,3 +109,23 @@ export async function accountForSession(sub: string, uid: string): Promise<{ use
   if (!record) return null;
   return { user: record, isOwner: isOwnerName };
 }
+
+/**
+ * Makes sure the owner has a database row.
+ *
+ * The credential file stays authoritative, but the panel and the bot both list accounts from
+ * Redis, so the owner is mirrored in as soon as either surface needs the list. Safe to call
+ * on every request: it only writes when the row is missing.
+ */
+export async function ensureOwnerAccount(): Promise<void> {
+  try {
+    const state = await loadAuthConfig();
+    const owner = ownerIdentity(state);
+    if (!owner) return;
+    const existing = await getUserByUsername(owner.username);
+    if (existing) return;
+    await materializeOwner(owner);
+  } catch {
+    // A missing mirror must never break a panel read.
+  }
+}
