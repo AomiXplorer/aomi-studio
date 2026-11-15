@@ -1102,6 +1102,10 @@
   font-weight: 600;
 }
 
+.land-card-title-lg {
+  font-size: 1.1875rem;
+}
+
 .land-body,
 .land-body-lg,
 .land-small,

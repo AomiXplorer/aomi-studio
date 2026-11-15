@@ -42,7 +42,8 @@ const FEATURES = [
     title: "AI Agent",
     body: "Reads the project before it writes, and explains each change.",
     icon: Bot,
-    span: "lg:col-span-2",
+    span: "lg:col-span-2 lg:p-8",
+    lead: true,
   },
   {
     id: "web",
@@ -50,6 +51,7 @@ const FEATURES = [
     body: "Describe a site and get the pages, styles and files.",
     icon: Globe2,
     span: "",
+    lead: false,
   },
   {
     id: "code",
@@ -57,6 +59,7 @@ const FEATURES = [
     body: "Refactor, review and debug in the same conversation.",
     icon: Code2,
     span: "",
+    lead: false,
   },
   {
     id: "workspace",
@@ -64,6 +67,7 @@ const FEATURES = [
     body: "Projects, a file tree and an editor that wait for you.",
     icon: FolderTree,
     span: "",
+    lead: false,
   },
   {
     id: "studio",
@@ -71,6 +75,7 @@ const FEATURES = [
     body: "Artwork and voice, saved next to the project.",
     icon: AudioLines,
     span: "",
+    lead: false,
   },
 ] as const;
 
@@ -103,8 +108,16 @@ export function LandingFeatures({ tools }: { tools: string[] }) {
               >
                 <Icon className="land-card-mark size-[18px]" strokeWidth={1.5} aria-hidden />
 
-                <h3 className="land-card-title mt-4 text-white">{feature.title}</h3>
-                <p className="mt-1.5 max-w-[34ch] text-[13.5px] leading-[1.55] text-white/50">{feature.body}</p>
+                <h3 className={`land-card-title mt-4 text-white ${feature.lead ? "land-card-title-lg" : ""}`}>
+                  {feature.title}
+                </h3>
+                <p
+                  className={`mt-1.5 text-[13.5px] leading-[1.55] text-white/50 ${
+                    feature.lead ? "lg:max-w-[46ch]" : "max-w-[34ch]"
+                  }`}
+                >
+                  {feature.body}
+                </p>
               </article>
             );
           })}
