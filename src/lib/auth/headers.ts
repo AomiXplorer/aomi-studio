@@ -5,7 +5,11 @@
  * inject them at runtime.
  */
 export function contentSecurityPolicy(nonce?: string): string {
-  const scriptSrc = nonce ? `'self' 'nonce-${nonce}' 'strict-dynamic'` : "'self' 'unsafe-inline'";
+    // Turnstile is loaded by our own bundle (allowed by strict-dynamic) and framed by it, so
+  // only that one origin is opened up.
+  const scriptSrc = nonce
+    ? `'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com`
+    : "'self' 'unsafe-inline' https://challenges.cloudflare.com";
   return [
     "default-src 'self'",
     `script-src ${scriptSrc}`,
@@ -13,8 +17,9 @@ export function contentSecurityPolicy(nonce?: string): string {
     "img-src 'self' data: blob:",
     "media-src 'self' data: blob:",
     "font-src 'self' data:",
-    "connect-src 'self'",
+    "connect-src 'self' https://challenges.cloudflare.com",
     "form-action 'self'",
+    "frame-src https://challenges.cloudflare.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "object-src 'none'",

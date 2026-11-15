@@ -6,6 +6,7 @@ import { LiveClock } from "@/components/auth/LiveClock";
 import { loadAuthConfig, ownerWhatsApp } from "@/lib/auth/config";
 import { accessPriceIdr } from "@/lib/payments/catalog";
 import { toolNames } from "@/lib/agent/tools";
+import { turnstileSiteKey } from "@/lib/auth/turnstile";
 
 export const metadata: Metadata = {
   title: "Sign in — Aomi",
@@ -197,6 +198,7 @@ export default async function LoginPage({
                   whatsapp={ownerWhatsApp(state)}
                   configured={Boolean(state.config)}
                   priceLabel={`Rp${accessPriceIdr().toLocaleString("id-ID")}`}
+                  turnstileSiteKey={turnstileSiteKey()}
                 />
               </div>
             </div>

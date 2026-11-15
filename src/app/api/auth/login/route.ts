@@ -13,6 +13,7 @@ import { audit } from "@/lib/db/audit";
 import { redis, redisConfigured } from "@/lib/db/redis";
 import { K } from "@/lib/db/keys";
 import { touchLogin } from "@/lib/db/users";
+import { verifyTurnstile } from "@/lib/auth/turnstile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,8 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   username: z.string().min(1).max(64),
   password: z.string().min(1).max(200),
+  // Present only when the browser ran a Cloudflare challenge.
+  turnstileToken: z.string().max(4096).optional(),
 });
 
 const MAX_FAILURES = 5;
@@ -46,6 +49,13 @@ export async function POST(request: Request) {
 
   const parsed = await parseBody(request, schema);
   if (parsed.error) return withSecurityHeaders(parsed.error);
+
+  // The challenge is settled before any credential is compared: a bot that cannot pass it
+  // never gets to spend a password attempt, and the account lockout stays for humans.
+  const challenge = await verifyTurnstile(parsed.data.turnstileToken, ip);
+  if (!challenge.ok) {
+    return withSecurityHeaders(errorResponse(challenge.message, challenge.status));
+  }
 
   const username = parsed.data.username.trim();
   const userKey = username.toLowerCase();

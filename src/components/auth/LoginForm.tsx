@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Turnstile } from "./Turnstile";
 import {
   AlertCircle,
   ArrowRight,
@@ -36,11 +37,13 @@ export function LoginForm({
   whatsapp,
   configured,
   priceLabel,
+  turnstileSiteKey = "",
 }: {
   next?: string;
   whatsapp: string;
   configured: boolean;
   priceLabel: string;
+  turnstileSiteKey?: string;
 }) {
   const router = useRouter();
   const [username, setUsername] = useState("");
@@ -49,6 +52,11 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>("idle");
   const [shake, setShake] = useState(0);
+  // A challenge token is spent by the first attempt, so a retry needs a new widget round.
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaRound, setCaptchaRound] = useState(0);
+
+  const takeToken = useCallback((token: string | null) => setCaptchaToken(token), []);
 
   const destination = safeNext(next);
   const pending = stage === "pending";
@@ -64,7 +72,9 @@ export function LoginForm({
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(
+          turnstileSiteKey ? { username, password, turnstileToken: captchaToken || "" } : { username, password },
+        ),
         cache: "no-store",
       });
       const payload = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
@@ -77,6 +87,10 @@ export function LoginForm({
         setPassword("");
         setShake((value) => value + 1);
         setStage("idle");
+        if (turnstileSiteKey) {
+          setCaptchaToken(null);
+          setCaptchaRound((value) => value + 1);
+        }
         return;
       }
       // A beat of confirmation before the room changes: the button is the only
@@ -202,10 +216,12 @@ export function LoginForm({
         </div>
       </div>
 
+      {turnstileSiteKey ? <Turnstile siteKey={turnstileSiteKey} onToken={takeToken} round={captchaRound} /> : null}
+
       <button
         type="submit"
         data-busy={pending}
-        disabled={pending || granted || !username.trim() || !password}
+        disabled={pending || granted || !username.trim() || !password || (Boolean(turnstileSiteKey) && !captchaToken)}
         className="a-submit mt-5 flex h-12 w-full items-center justify-center gap-2 bg-[#fafafa] text-[13.5px] font-semibold tracking-[-0.01em] text-[#09090b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a] disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/55"
       >
         {granted ? (
