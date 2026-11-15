@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LiveClock } from "@/components/auth/LiveClock";
 import { LandingHero } from "./Hero";
-import { LandingAbout, LandingClosing, LandingFacts, LandingFeatures, LandingFooter, LandingProcess } from "./Sections";
+import { LandingAbout, LandingClosing, LandingFeatures, LandingFooter, LandingProcess } from "./Sections";
 
 /**
  * The public front door.
@@ -54,7 +53,7 @@ export function Landing({ tools, priceLabel }: { tools: string[]; priceLabel: st
           observer.unobserve(entry.target);
         }
       },
-      { rootMargin: "0px 0px -8% 0px", threshold: 0.12 },
+      { rootMargin: "0px 0px -6% 0px", threshold: 0.1 },
     );
 
     targets.forEach((node) => observer.observe(node));
@@ -70,7 +69,7 @@ export function Landing({ tools, priceLabel }: { tools: string[]; priceLabel: st
     const shift = () => {
       frame = 0;
       // Capped: past the first screen the artwork has left anyway.
-      const offset = Math.min(window.scrollY, 820) * 0.06;
+      const offset = Math.min(window.scrollY, 820) * 0.055;
       root.style.setProperty("--land-shift", `${offset.toFixed(2)}px`);
     };
     const onScroll = () => {
@@ -99,49 +98,46 @@ export function Landing({ tools, priceLabel }: { tools: string[]; priceLabel: st
         Skip to content
       </a>
 
-      {/* Nav: brand, one status line, one door. It frames the page, it does not lead it. */}
-      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#08080a]/72 backdrop-blur-xl">
-        <div className="mx-auto flex h-[54px] w-full max-w-[1340px] items-center justify-between gap-3 px-5 sm:h-[58px] sm:px-8 lg:px-12">
+      {/* Nav: brand and a door. No clock, no status lamp, no second navigation. */}
+      <header className="sticky top-0 z-40 bg-[#08080a]/75 backdrop-blur-xl">
+        <div className="mx-auto flex h-[60px] w-full max-w-[1240px] items-center justify-between gap-3 px-5 sm:h-[68px] sm:px-8 lg:px-10">
           <Link
             href="/"
             className="group flex items-center gap-2.5 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
           >
             <span
               aria-hidden
-              className="relative grid size-[26px] place-items-center rounded-[7px] border border-white/15 bg-white/[0.04] text-[12.5px] font-semibold leading-none text-white/90 transition-colors duration-200 group-hover:border-white/30 group-hover:text-white"
+              className="grid size-[26px] place-items-center rounded-[7px] border border-white/15 bg-white/[0.04] text-[12.5px] font-semibold leading-none text-white/90 transition-colors duration-200 group-hover:border-white/30 group-hover:text-white"
             >
               a
-              <span className="absolute inset-x-1.5 -bottom-px h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.26em] text-white/70 transition-colors duration-200 group-hover:text-white">
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/70 transition-colors duration-200 group-hover:text-white">
               aomi studio
             </span>
           </Link>
 
-          <div className="flex items-center gap-3 sm:gap-4">
-            <span className="hidden font-mono text-[9.5px] uppercase tracking-[0.26em] text-white/55 md:inline">
-              ai agent × astra
-            </span>
-            <span aria-hidden className="hidden h-3 w-px bg-white/10 md:block" />
-            <span className="hidden items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-white/55 sm:flex">
-              <span aria-hidden className="size-1.5 rounded-full bg-[#86c9a4] shadow-[0_0_8px_rgba(134,201,164,0.55)]" />
-              <LiveClock />
-              <span className="text-white/50">wib</span>
-            </span>
-
+          <div className="flex items-center gap-5">
             <Link
               href={authed ? "/chat" : "/login"}
-              className="rounded-lg border border-white/15 bg-white/[0.04] px-3.5 py-2 text-[12px] font-medium text-white/85 transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+              className="text-[13.5px] font-medium text-white/60 transition-colors duration-150 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/70"
             >
               {authed ? "Workspace" : "Sign in"}
             </Link>
+
+            {authed ? null : (
+              <Link
+                href="/buy"
+                className="rounded-lg border border-white/15 px-4 py-2.5 text-[13.5px] font-medium text-white/90 transition-colors duration-200 hover:border-white/35 hover:bg-white/[0.06] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+              >
+                Get access
+              </Link>
+            )}
           </div>
         </div>
       </header>
 
       <main id="content" lang="en">
         <LandingHero authed={authed} tools={tools.length} priceLabel={priceLabel} />
-        <LandingFacts tools={tools.length} priceLabel={priceLabel} />
         <LandingAbout />
         <LandingFeatures tools={tools} />
         <LandingProcess />

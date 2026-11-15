@@ -5,9 +5,9 @@ import { accessPriceIdr } from "@/lib/payments/catalog";
 
 const siteUrl = (process.env.AOMI_PUBLIC_URL || "https://vierraapi.my.id").replace(/\/+$/, "");
 
-const title = "Aomi Studio — Your Ideas. Our Intelligence.";
+const title = "Aomi Studio — Meet Aomi, your personal AI workspace";
 const description =
-  "Meet Aomi, your AI-powered creative workspace. Turn your imagination into reality with an agent that writes real files, builds websites and keeps every project you start.";
+  "Build websites, create projects, and bring your ideas to life with Astra, the AI agent inside Aomi Studio.";
 
 /**
  * The public introduction. It is deliberately static: nothing here reads the
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
         url: `${siteUrl}/og-banner.jpg`,
         width: 1200,
         height: 630,
-        alt: "Aomi Studio — Your Ideas. Our Intelligence.",
+        alt: "Aomi Studio — Meet Aomi, your personal AI workspace.",
         type: "image/jpeg",
       },
     ],

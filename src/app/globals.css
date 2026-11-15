@@ -1013,19 +1013,20 @@
 }
 
 /* ── Introduction: the public front door ───────────────────────────────────
-   Same room as the gate, but read like a printed spread: an asymmetric hero
-   with Astra bleeding off the right edge, hairline rules instead of boxes, and
-   mono kept to the margins. Everything animates on opacity and transform, is
-   driven by one scroll listener, and dies under prefers-reduced-motion. */
+   One grotesk, four lines of type, one artwork. Numbering, rules and monospace
+   lists are gone; the only mono left is the brand mark. Everything animates on
+   opacity and transform, is driven by one scroll listener, and dies under
+   prefers-reduced-motion. */
 
 .land-room {
   background-color: #08080a;
   color: #fafafa;
+  font-family: var(--font-grotesk), ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 /* Anchor jumps clear the sticky bar instead of hiding the heading under it. */
 .land-anchor {
-  scroll-margin-top: 82px;
+  scroll-margin-top: 88px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1038,101 +1039,90 @@
    once the observer is armed, so a blocked script can never leave a blank page. */
 .land-reveal {
   transition:
-    opacity 640ms cubic-bezier(0.16, 1, 0.3, 1) var(--land-delay, 0ms),
-    transform 640ms cubic-bezier(0.16, 1, 0.3, 1) var(--land-delay, 0ms);
+    opacity 620ms cubic-bezier(0.16, 1, 0.3, 1) var(--land-delay, 0ms),
+    transform 620ms cubic-bezier(0.16, 1, 0.3, 1) var(--land-delay, 0ms);
 }
 
 .land-room[data-land-reveal="on"] .land-reveal:not([data-seen="true"]) {
   opacity: 0;
-  transform: translate3d(0, 16px, 0);
+  transform: translate3d(0, 12px, 0);
 }
 
 /* The hero art drifts a few pixels as the page scrolls: one variable, set by
    the single scroll listener, read by both the desktop and mobile layers. */
 .land-parallax {
-  transform: translate3d(0, calc(var(--land-shift, 0px) * 1), 0) scale(1.04);
+  transform: translate3d(0, calc(var(--land-shift, 0px) * 1), 0) scale(1.03);
   will-change: transform;
 }
 
-/* A card that is a sheet of glass, not a floating chip: the top hairline is the
-   only thing that lights up on hover, which keeps the grid calm when scanned. */
-.land-card {
-  position: relative;
-  isolation: isolate;
+/* ── Primary action ────────────────────────────────────────────────────────
+   The one white object on the page. Its light is a soft drop, not a glow, and
+   the only motion is the arrow stepping to the right. */
+.land-cta {
+  background-color: #fafafa;
+  color: #09090b;
+  box-shadow: 0 14px 34px -18px rgb(255 255 255 / 0.55);
   transition:
+    background-color 160ms ease,
+    box-shadow 200ms ease,
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.land-cta:hover {
+  background-color: #ffffff;
+  box-shadow: 0 18px 40px -16px rgb(255 255 255 / 0.5);
+  transform: translate3d(0, -1px, 0);
+}
+
+.land-cta:active {
+  transform: translate3d(0, 0, 0);
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────────────
+   A quiet surface: one soft fill, one hairline, no inner rules. Hover lifts the
+   card two pixels and warms the surface and the icon, nothing else. */
+.land-card {
+  border: 1px solid rgb(255 255 255 / 0.07);
+  background-color: rgb(255 255 255 / 0.022);
+  transition:
+    border-color 220ms ease,
+    background-color 220ms ease,
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.land-card:hover {
+  border-color: rgb(255 255 255 / 0.14);
+  background-color: rgb(255 255 255 / 0.042);
+  transform: translate3d(0, -2px, 0);
+}
+
+/* The wide card carries the product: a little more light, a little more air. */
+.land-card-lead {
+  background-image: radial-gradient(120% 130% at 8% 0%, rgb(255 255 255 / 0.055), transparent 62%);
+}
+
+.land-card-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  background-color: rgb(255 255 255 / 0.04);
+  color: rgb(255 255 255 / 0.62);
+  transition:
+    color 220ms ease,
     border-color 220ms ease,
     background-color 220ms ease;
 }
 
-.land-card::after {
-  content: "";
-  position: absolute;
-  inset-inline: 14px;
-  top: -1px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
-  opacity: 0;
-  transition: opacity 260ms ease;
+.land-card:hover .land-card-icon {
+  border-color: rgb(255 255 255 / 0.18);
+  background-color: rgb(255 255 255 / 0.08);
+  color: rgb(255 255 255 / 0.95);
 }
 
-.land-card:hover::after,
-.land-card:focus-within::after {
-  opacity: 1;
-}
-
-.land-index {
-  transition: color 220ms ease;
-}
-
-.land-card:hover .land-index {
-  color: rgb(255 255 255 / 0.5);
-}
-
-/* Process rows: the rule under a row inks in from the left on hover. */
-.land-step {
-  position: relative;
-}
-
-.land-step::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  bottom: -1px;
-  height: 1px;
-  background: linear-gradient(90deg, rgb(255 255 255 / 0.4), transparent 70%);
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.land-step:hover::after {
-  transform: scaleX(1);
-}
-
-/* Three dots that keep working, used by step two. */
-.land-dot {
-  animation: land-dot 1.6s ease-in-out infinite;
-}
-
-.land-dot:nth-child(2) {
-  animation-delay: 200ms;
-}
-
-.land-dot:nth-child(3) {
-  animation-delay: 400ms;
-}
-
-@keyframes land-dot {
-  0%,
-  100% {
-    opacity: 0.28;
-  }
-  40% {
-    opacity: 1;
-  }
-}
-
-/* The Explore Features link: one line that draws itself instead of a button. */
+/* Text links: the underline sits a third of a pixel thin and warms on hover. */
 .land-link-line {
   position: relative;
 }
@@ -1145,35 +1135,25 @@
   bottom: -3px;
   height: 1px;
   background: currentColor;
-  opacity: 0.35;
-  transform: scaleX(1);
-  transform-origin: right center;
-  transition:
-    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 260ms ease;
+  opacity: 0.3;
+  transition: opacity 260ms ease;
 }
 
-.land-link-line:hover::after,
-.land-link-line:focus-visible::after {
-  opacity: 0.9;
-}
-
-.land-link-arrow {
-  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.land-link:hover .land-link-arrow {
-  transform: translate3d(0, 2px, 0);
+.land-link:hover .land-link-line::after,
+.land-link:focus-visible .land-link-line::after {
+  opacity: 0.85;
 }
 
 /* The art in the closing band never competes with the sentence over it. */
 .land-cta-art {
-  mask-image: linear-gradient(to right, transparent, #000 34%, #000 76%, transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 34%, #000 76%, transparent);
-  opacity: 0.5;
+  mask-image: linear-gradient(to right, transparent, #000 30%, #000 72%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 30%, #000 72%, transparent);
+  opacity: 0.42;
 }
 
-.land-hairline {
-  height: 1px;
-  background: linear-gradient(90deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0.04));
+@media (prefers-reduced-motion: reduce) {
+  .land-cta:hover,
+  .land-card:hover {
+    transform: none;
+  }
 }
