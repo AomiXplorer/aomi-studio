@@ -104,7 +104,7 @@ export function Landing({ tools, priceLabel }: { tools: string[]; priceLabel: st
         <div className="mx-auto flex h-[54px] w-full max-w-[1340px] items-center justify-between gap-3 px-5 sm:h-[58px] sm:px-8 lg:px-12">
           <Link
             href="/"
-            className="group flex items-center gap-2.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a]"
+            className="group flex items-center gap-2.5 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
           >
             <span
               aria-hidden
@@ -131,7 +131,7 @@ export function Landing({ tools, priceLabel }: { tools: string[]; priceLabel: st
 
             <Link
               href={authed ? "/chat" : "/login"}
-              className="rounded-lg border border-white/15 bg-white/[0.04] px-3.5 py-2 text-[12px] font-medium text-white/85 transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a]"
+              className="rounded-lg border border-white/15 bg-white/[0.04] px-3.5 py-2 text-[12px] font-medium text-white/85 transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
             >
               {authed ? "Workspace" : "Sign in"}
             </Link>

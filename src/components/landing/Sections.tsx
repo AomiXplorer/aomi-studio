@@ -345,7 +345,7 @@ export function LandingClosing({ authed, priceLabel }: { authed: boolean; priceL
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
             <Link
               href={authed ? "/chat" : "/login"}
-              className="a-submit flex h-12 items-center justify-center gap-2 bg-[#fafafa] px-6 text-[13.5px] font-semibold tracking-[-0.01em] text-[#09090b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a]"
+              className="a-submit flex h-12 items-center justify-center gap-2 bg-[#fafafa] px-6 text-[13.5px] font-semibold tracking-[-0.01em] text-[#09090b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             >
               {authed ? "Open workspace" : "Get Started"}
               <ArrowRight className="a-submit-arrow size-4" aria-hidden />
@@ -353,7 +353,7 @@ export function LandingClosing({ authed, priceLabel }: { authed: boolean; priceL
 
             <Link
               href="/buy"
-              className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-white/65 transition-colors duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-4 focus-visible:ring-offset-[#08080a]"
+              className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-white/65 transition-colors duration-150 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/70"
             >
               <span className="land-link-line">Buy access — {priceLabel}</span>
               <ArrowUpRight className="size-3.5 text-white/35 transition-colors duration-150 group-hover:text-white/80" aria-hidden />

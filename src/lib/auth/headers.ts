@@ -62,7 +62,7 @@ export function withSecurityHeaders(response: Response, nonce?: string): Respons
  * The share card and the artwork are public by definition: they are what WhatsApp and the
  * other unfurlers fetch, and neither contains anything from a user's workspace.
  */
-export const PUBLIC_FILES = ["/og-banner.jpg", "/astra.webp"] as const;
+export const PUBLIC_FILES = ["/og-banner.jpg", "/astra.webp", "/icon.svg"] as const;
 
 export const PUBLIC_PATHS = [
   // The introduction is the front door: a visitor has to be able to read what Aomi

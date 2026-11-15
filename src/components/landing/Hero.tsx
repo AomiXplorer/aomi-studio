@@ -99,7 +99,7 @@ export function LandingHero({
             <div className="a-rise mt-8 flex flex-wrap items-center gap-x-6 gap-y-4" style={stage(3)}>
               <Link
                 href={start}
-                className="a-submit flex h-12 items-center justify-center gap-2 bg-[#fafafa] px-6 text-[13.5px] font-semibold tracking-[-0.01em] text-[#09090b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a]"
+                className="a-submit flex h-12 items-center justify-center gap-2 bg-[#fafafa] px-6 text-[13.5px] font-semibold tracking-[-0.01em] text-[#09090b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
                 {authed ? "Open workspace" : "Get Started"}
                 <ArrowRight className="a-submit-arrow size-4" aria-hidden />
@@ -107,7 +107,7 @@ export function LandingHero({
 
               <a
                 href="#features"
-                className="land-link group inline-flex items-center gap-1.5 text-[13px] font-medium text-white/70 transition-colors duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-4 focus-visible:ring-offset-[#08080a]"
+                className="land-link group inline-flex items-center gap-1.5 text-[13px] font-medium text-white/70 transition-colors duration-150 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/70"
               >
                 <span className="land-link-line">Explore Features</span>
                 <ArrowDown className="land-link-arrow size-3.5 text-white/40 group-hover:text-white/80" aria-hidden />
