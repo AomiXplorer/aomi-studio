@@ -185,6 +185,15 @@ Tested on 2026-11-14 against the live provider and a local production build:
 - Static check flags an unclosed brace in a JS file and stays quiet on valid code.
 - Headless Chrome check: no horizontal overflow on any page at 1440x900 or 390x844,
   background `#09090b`.
+- Introduction page (2026-11-15): no horizontal overflow at 320, 360, 390, 430, 768,
+  1024 and 1440; the hero's Get Started button stays above the fold on every phone
+  width; all 17 scroll-reveal blocks resolve; the anchor from Explore Features lands
+  82px clear of the sticky bar; with `prefers-reduced-motion: reduce` nothing is hidden
+  and no parallax runs; every text node measured at 4.5:1 or better against `#08080a`.
+- Routing (2026-11-15): `/`, `/login`, `/buy` answer 200 without a cookie, `/chat`,
+  `/projects`, `/settings` and `/admin` answer 307 to `/login?next=…`, owner sign-in
+  lands on `/chat`, a signed-in visit to `/login` goes to `/chat`, and the landing page
+  swaps both of its calls to action for "Open workspace" once a session exists.
 
 ## Known limits
 
