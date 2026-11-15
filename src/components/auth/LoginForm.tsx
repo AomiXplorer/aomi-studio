@@ -3,7 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Eye, EyeOff, MessageCircle, Sparkle } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  Check,
+  Eye,
+  EyeOff,
+  LogIn,
+  MessageCircle,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
 
 /** Only ever redirects inside this site: `//evil.com` and absolute URLs are refused. */
 function safeNext(raw: string | undefined): string {
@@ -11,10 +21,14 @@ function safeNext(raw: string | undefined): string {
   return raw;
 }
 
+type Stage = "idle" | "pending" | "success";
+
 /**
- * The sign-in is presented as one session in a shell: a numbered gutter, a spine,
- * fields that behave like prompt lines and an output log under them. Everything a
- * form still needs (labels, autocomplete, aria-invalid, focus rings) is kept in place.
+ * The sign-in, written as a product and not as a console. Two equal ways in sit
+ * on one switch; the fields are ordinary boxes that warm up on focus; the result
+ * of a try appears once, under the button, in a colour that means something.
+ * Everything the browser needs (labels, autocomplete, aria-invalid, a live
+ * region) is still here — the redesign is skin and motion, not new auth logic.
  */
 export function LoginForm({
   next,
@@ -32,16 +46,19 @@ export function LoginForm({
   const [password, setPassword] = useState("");
   const [reveal, setReveal] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const [stage, setStage] = useState<Stage>("idle");
+  const [shake, setShake] = useState(0);
 
   const destination = safeNext(next);
+  const pending = stage === "pending";
+  const granted = stage === "success";
   const invalid = Boolean(error);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (pending) return;
+    if (pending || granted) return;
     setError(null);
-    setPending(true);
+    setStage("pending");
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -57,186 +74,202 @@ export function LoginForm({
             : payload?.error?.message || "Incorrect username or password.",
         );
         setPassword("");
+        setShake((value) => value + 1);
+        setStage("idle");
         return;
       }
-      router.replace(destination);
-      router.refresh();
+      // A beat of confirmation before the room changes: the button is the only
+      // thing that reports success, so it is worth seeing it happen.
+      setStage("success");
+      setTimeout(() => {
+        router.replace(destination);
+        router.refresh();
+      }, 420);
     } catch {
       setError("Cannot reach the server. Check your connection and try again.");
-    } finally {
-      setPending(false);
+      setShake((value) => value + 1);
+      setStage("idle");
     }
   }
 
-  const row = "grid grid-cols-[1.5rem_1px_minmax(0,1fr)] items-stretch";
-
   return (
     <form onSubmit={submit} noValidate className="w-full">
-      {/* Two ways in, one primary action. Sign-in stays the loudest button on the sheet;
-          buying access is the quieter, outlined half of the same switch. */}
-      <div className="mb-7 grid grid-cols-2 border border-[#1c1c20]" role="group" aria-label="Sign in or buy access">
+      {/* Two ways in, one thumb. Equal halves, equal height, no clipped label: the
+          price lives on its own line under the words, so nothing has to truncate. */}
+      <div
+        className="a-switch relative grid grid-cols-2 gap-1 rounded-[11px] border border-white/[0.08] bg-white/[0.02] p-1"
+        role="group"
+        aria-label="Sign in or buy access"
+      >
+        <span
+          aria-hidden
+          className="a-switch-thumb pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-6px)] rounded-[8px] bg-white/[0.075] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.35)]"
+        />
         <span
           aria-current="page"
-          className="flex h-11 items-center justify-center gap-2 border-b-2 border-[#fafafa] bg-[#111113] font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#fafafa]"
+          className="a-switch-tab relative z-10 flex h-[52px] flex-col items-center justify-center rounded-[8px] text-white"
         >
-          Login
+          <span className="flex items-center gap-1.5 text-[12.5px] font-medium leading-none">
+            <LogIn className="size-3.5 text-white/60" aria-hidden />
+            Sign in
+          </span>
+          <span className="mt-1.5 font-mono text-[9px] uppercase leading-none tracking-[0.18em] text-white/50">
+            workspace
+          </span>
         </span>
         <Link
           href="/buy"
-          className="group flex h-11 items-center justify-center gap-2 border-b-2 border-transparent border-l border-l-[#1c1c20] font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#a1a1aa] transition-colors hover:bg-[#111113] hover:text-[#fafafa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa]/60 focus-visible:ring-inset"
+          className="a-switch-tab group relative z-10 flex h-[52px] flex-col items-center justify-center rounded-[8px] text-white/55 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-inset"
         >
-          <Sparkle className="size-3 text-[#8b8b96] transition-colors group-hover:text-[#fafafa]" aria-hidden />
-          Buy Access
-          <span className="border border-[#27272a] px-1.5 py-0.5 text-[9.5px] tracking-[0.1em] text-[#8b8b96] transition-colors group-hover:border-[#3a3a3f] group-hover:text-[#d4d4d8]">
+          <span className="flex items-center gap-1.5 text-[12.5px] font-medium leading-none">
+            <Sparkles className="size-3.5 text-white/35 transition-colors duration-200 group-hover:text-white/80" aria-hidden />
+            Buy access
+          </span>
+          <span className="mt-1.5 font-mono text-[9px] uppercase leading-none tracking-[0.18em] text-white/55 transition-colors duration-200 group-hover:text-white/75">
             {priceLabel}
           </span>
         </Link>
       </div>
 
-      <div className={invalid ? "sh-shake" : undefined}>
-        <div className={`${row} sh-field`} data-invalid={invalid}>
-          <span className="sh-gutter pr-2 pt-4 font-mono text-[10px] leading-none text-[#8b8b96]">01</span>
-          <span className="bg-[#1c1c20]" aria-hidden />
-          <div className="sh-ruler px-4 pb-3.5 pt-3.5">
-            <label
-              htmlFor="username"
-              className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#8b8b96]"
-            >
+      <div
+        className={`mt-5 space-y-4 ${shake ? "a-shake" : ""}`}
+        onAnimationEnd={() => setShake(0)}
+      >
+        <div className="a-field" data-invalid={invalid}>
+          <div className="mb-1.5 flex items-baseline justify-between gap-2">
+            <label htmlFor="username" className="text-[12px] font-medium tracking-[-0.01em] text-white/70">
               Username
             </label>
-            <div className="flex items-baseline gap-2">
-              <span className="select-none font-mono text-[13px] leading-none text-[#3a3a3f]" aria-hidden>
-                ›
-              </span>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                autoComplete="username"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                required
-                autoFocus
-                aria-invalid={invalid}
-                aria-describedby={error ? "login-error" : undefined}
-                className="w-full bg-transparent font-mono text-[14px] leading-none tracking-[-0.01em] text-[#fafafa] outline-none placeholder:text-[#52525b] focus-visible:outline-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className={`${row} sh-field`} data-invalid={invalid}>
-          <span className="sh-gutter pr-2 pt-4 font-mono text-[10px] leading-none text-[#8b8b96]">02</span>
-          <span className="bg-[#1c1c20]" aria-hidden />
-          <div className="sh-ruler px-4 pb-3.5 pt-3.5">
-            <div className="mb-1.5 flex items-center justify-between">
-              <label
-                htmlFor="password"
-                className="block font-mono text-[10px] uppercase tracking-[0.2em] text-[#8b8b96]"
-              >
-                Password
-              </label>
-              <button
-                type="button"
-                onClick={() => setReveal((value) => !value)}
-                aria-label={reveal ? "Hide password" : "Show password"}
-                aria-pressed={reveal}
-                className="-my-[13px] flex min-h-[40px] items-center gap-1.5 py-[13px] font-mono text-[10px] uppercase tracking-[0.16em] text-[#8b8b96] transition-colors hover:text-[#fafafa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090b]"
-              >
-                {reveal ? <EyeOff className="size-3" aria-hidden /> : <Eye className="size-3" aria-hidden />}
-                {reveal ? "hide" : "show"}
-              </button>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="select-none font-mono text-[13px] leading-none text-[#3a3a3f]" aria-hidden>
-                ›
-              </span>
-              <input
-                id="password"
-                name="password"
-                type={reveal ? "text" : "password"}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
-                required
-                aria-invalid={invalid}
-                aria-describedby={error ? "login-error" : undefined}
-                className="w-full bg-transparent font-mono text-[14px] leading-none tracking-[-0.01em] text-[#fafafa] outline-none placeholder:text-[#52525b] focus-visible:outline-none"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className={`${row} mt-4`}>
-        <span className="pt-3" aria-hidden />
-        <span className="bg-[#1c1c20]" aria-hidden />
-        <div className="px-0 pt-0">
-          <button
-            type="submit"
-            disabled={pending || !username.trim() || !password}
-            className="sh-submit flex h-12 w-full items-center justify-between gap-3 bg-[#fafafa] px-4 text-[12px] font-semibold uppercase tracking-[0.14em] text-[#09090b] transition-colors hover:bg-[#d4d4d8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa] focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090b] disabled:cursor-not-allowed disabled:bg-[#18181b] disabled:text-[#8b8b96]"
-          >
-            <span className="flex items-center gap-2">
-              {pending ? "Checking" : "Sign in"}
-              {pending ? <span className="sh-dots" aria-hidden /> : null}
+            <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/20" aria-hidden>
+              id
             </span>
-            {pending ? (
-              <ArrowRight className="size-3.5 animate-pulse" aria-hidden />
-            ) : (
-              <span className="flex items-center gap-2">
-                <span className="sh-keycap">↵</span>
-                <ArrowRight className="size-3.5" aria-hidden />
-              </span>
-            )}
-          </button>
-
-          {/* Output log: the only place where the result of a try appears. */}
-          <div aria-live="polite" className="min-h-[42px] pt-3">
-            {error ? (
-              <p id="login-error" role="alert" className="sh-enter flex items-start gap-2 font-mono text-[11.5px] leading-relaxed text-[#e58f8f]">
-                <span className="select-none" aria-hidden>
-                  !
-                </span>
-                <span>{error}</span>
-              </p>
-            ) : (
-              <p className="font-mono text-[11.5px] leading-relaxed text-[#8b8b96]">
-                {pending ? "verifying credentials" : "awaiting input"}
-              </p>
-            )}
           </div>
+          <div className="a-input">
+            <UserRound className="size-4 shrink-0 text-white/25" aria-hidden />
+            <input
+              id="username"
+              name="username"
+              type="text"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="next"
+              required
+              aria-invalid={invalid}
+              aria-describedby={error ? "login-error" : undefined}
+              placeholder="your username"
+            />
+          </div>
+        </div>
 
-          {!configured ? (
-            <p className="mt-1 border-l border-[#3a3a3f] pl-3 font-mono text-[11px] leading-relaxed text-[#8b8b96]">
-              the server has no credential source yet. set the private repo or{" "}
-              <code className="text-[#fafafa]">AOMI_AUTH_JSON</code> in Vercel.
-            </p>
-          ) : null}
+        <div className="a-field" data-invalid={invalid}>
+          <div className="mb-1.5 flex items-baseline justify-between gap-2">
+            <label htmlFor="password" className="text-[12px] font-medium tracking-[-0.01em] text-white/70">
+              Password
+            </label>
+            <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/20" aria-hidden>
+              secret
+            </span>
+          </div>
+          <div className="a-input">
+            <input
+              id="password"
+              name="password"
+              type={reveal ? "text" : "password"}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+              enterKeyHint="go"
+              required
+              aria-invalid={invalid}
+              aria-describedby={error ? "login-error" : undefined}
+              placeholder="your password"
+            />
+            <button
+              type="button"
+              onClick={() => setReveal((value) => !value)}
+              aria-label={reveal ? "Hide password" : "Show password"}
+              aria-pressed={reveal}
+              className="-mr-2 grid size-10 shrink-0 place-items-center rounded-md text-white/30 transition-colors duration-150 hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            >
+              {reveal ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className={`${row} mt-6`}>
-        <span className="pt-1" aria-hidden />
-        <span className="bg-[#1c1c20]" aria-hidden />
-        <div className="px-4">
-          <p className="font-mono text-[11px] leading-relaxed text-[#8b8b96]">
-            owner access only. forgot the password? ask on WhatsApp.
+      <button
+        type="submit"
+        data-busy={pending}
+        disabled={pending || granted || !username.trim() || !password}
+        className="a-submit mt-5 flex h-12 w-full items-center justify-center gap-2 bg-[#fafafa] text-[13.5px] font-semibold tracking-[-0.01em] text-[#09090b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a] disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/55"
+      >
+        {granted ? (
+          <>
+            <Check className="a-check size-4" aria-hidden />
+            Access granted
+          </>
+        ) : pending ? (
+          <>
+            <span className="a-spin" aria-hidden />
+            Signing in
+          </>
+        ) : (
+          <>
+            Sign in
+            <ArrowRight className="a-submit-arrow size-4" aria-hidden />
+          </>
+        )}
+      </button>
+
+      {/* One place for the result. It reserves its height so the button never jumps
+          away from the thumb that is about to tap it again. */}
+      <div aria-live="polite" className="mt-3 min-h-[40px]">
+        {error ? (
+          <p id="login-error" role="alert" className="flex items-start gap-2 text-[12px] leading-relaxed text-[#e58f8f]">
+            <AlertCircle className="mt-[2px] size-3.5 shrink-0" aria-hidden />
+            <span>{error}</span>
           </p>
+        ) : granted ? (
+          <p className="flex items-center gap-2 text-[12px] leading-relaxed text-[#86c9a4]">
+            <Check className="size-3.5" aria-hidden />
+            Opening your workspace…
+          </p>
+        ) : (
+          <p className="flex items-center gap-2 font-mono text-[10px] uppercase leading-relaxed tracking-[0.16em] text-white/50">
+            <span
+              aria-hidden
+              className={`size-1.5 rounded-full ${pending ? "animate-pulse bg-white/70" : "bg-white/25"}`}
+            />
+            {pending ? "verifying credentials" : "ready when you are"}
+          </p>
+        )}
+      </div>
+
+      {!configured ? (
+        <p className="mt-1 rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-[11.5px] leading-relaxed text-white/55">
+          The server has no credential source yet. Set the private repo or{" "}
+          <code className="rounded-sm bg-white/[0.06] px-1 py-0.5 font-mono text-[11px] text-white/80">AOMI_AUTH_JSON</code>{" "}
+          in Vercel.
+        </p>
+      ) : null}
+
+      <div className="mt-6">
+        <span aria-hidden className="a-rule block" />
+        <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
+          <p className="text-[11.5px] leading-relaxed text-white/55">Owner access only. Forgot the password?</p>
           <a
             href={`https://wa.me/${whatsapp}?text=${encodeURIComponent("Hi, I would like to request access to Aomi Studio.")}`}
             target="_blank"
             rel="noreferrer noopener"
-            className="group mt-2 inline-flex items-center gap-2 font-mono text-[11.5px] text-[#fafafa] transition-colors hover:text-[#d4d4d8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090b]"
+            className="group inline-flex items-center gap-1.5 text-[11.5px] font-medium text-white/65 transition-colors duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a]"
           >
-            <MessageCircle className="size-3.5 text-[#8b8b96]" aria-hidden />
-            contact owner
-            <span className="text-[#8b8b96] underline decoration-[#3a3a3f] underline-offset-4 transition-colors group-hover:decoration-[#fafafa]">
-              +{whatsapp}
-            </span>
+            <MessageCircle className="size-3.5 text-white/30 transition-colors duration-150 group-hover:text-white/70" aria-hidden />
+            Ask on WhatsApp
+            <span className="font-mono text-[10px] tracking-[0.04em] text-white/45">+{whatsapp}</span>
           </a>
         </div>
       </div>

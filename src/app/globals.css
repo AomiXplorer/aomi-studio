@@ -669,3 +669,345 @@
     opacity: 1;
   }
 }
+
+/* ── Sign in: premium dark ──────────────────────────────────────────────────
+   One dark room, one light source, one character. The form is a quiet panel of
+   glass over it: type does the hierarchy, mono is a whisper, and nothing moves
+   while the user is typing. Every animation here is opacity/transform only and
+   is switched off by the prefers-reduced-motion rule above. */
+
+.a-room {
+  background-color: #08080a;
+  color: #fafafa;
+}
+
+/* Two pools of light and a whisper of grain. The glow breathes on a 24s loop,
+   slow enough to read as atmosphere rather than motion. */
+.a-glow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.a-glow::before,
+.a-glow::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+}
+
+.a-glow::before {
+  top: -22%;
+  left: 44%;
+  width: min(920px, 132%);
+  aspect-ratio: 2 / 1;
+  translate: -50% 0;
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.075), transparent 70%);
+  animation: a-breathe 24s ease-in-out infinite alternate;
+}
+
+.a-glow::after {
+  bottom: -38%;
+  left: -18%;
+  width: min(720px, 118%);
+  aspect-ratio: 1;
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.035), transparent 68%);
+  animation: a-drift 32s ease-in-out infinite alternate;
+}
+
+@keyframes a-breathe {
+  from {
+    opacity: 0.65;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(-2%, 1.5%, 0) scale(1.06);
+  }
+}
+
+@keyframes a-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(3%, -2%, 0);
+  }
+}
+
+/* A 1px grid, at the edge of visibility: it reads as printed stock, not a HUD. */
+.a-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.028) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.028) 1px, transparent 1px);
+  background-size: 88px 88px;
+  mask-image: radial-gradient(120% 90% at 50% 0%, #000 0%, transparent 78%);
+}
+
+/* Entrance: a short lift, staggered by --i. */
+.a-rise {
+  animation: a-rise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@keyframes a-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The artwork never sits still: 4% of drift over 44 seconds. */
+.a-hero-img {
+  animation: a-kenburns 44s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes a-kenburns {
+  from {
+    transform: scale(1.005) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.045) translate3d(-0.8%, -1%, 0);
+  }
+}
+
+/* Ambient scan: a single soft band of light crossing the banner every 18s. */
+.a-hero-scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 34%, rgb(255 255 255 / 0.055) 48%, transparent 62%);
+  background-size: 240% 100%;
+  animation: a-scan 18s ease-in-out infinite;
+}
+
+@keyframes a-scan {
+  0%,
+  62% {
+    background-position: 130% 0;
+    opacity: 0;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    background-position: -60% 0;
+    opacity: 0;
+  }
+}
+
+/* Segmented switch: one thumb, two equal halves. Hovering the secondary option
+   slides the thumb across as a preview of where it goes. */
+.a-switch-thumb {
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 200ms ease,
+    box-shadow 240ms ease;
+}
+
+.a-switch:has(a:hover) .a-switch-thumb,
+.a-switch:has(a:focus-visible) .a-switch-thumb {
+  transform: translate3d(calc(100% + 4px), 0, 0);
+  background-color: rgb(255 255 255 / 0.045);
+  box-shadow: none;
+}
+
+.a-switch-tab {
+  transition: color 200ms ease;
+}
+
+/* Field: a quiet box that warms up, with a rule that inks in from the left. */
+.a-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-inline: 13px;
+  border: 1px solid rgb(255 255 255 / 0.09);
+  border-radius: 10px;
+  background-color: rgb(255 255 255 / 0.022);
+  transition:
+    border-color 180ms ease,
+    background-color 220ms ease,
+    box-shadow 240ms ease;
+}
+
+.a-input::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -1px;
+  height: 1px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0.15));
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.a-input:focus-within {
+  border-color: rgb(255 255 255 / 0.26);
+  background-color: rgb(255 255 255 / 0.045);
+  box-shadow: 0 0 0 4px rgb(255 255 255 / 0.035);
+}
+
+.a-input:focus-within::after {
+  transform: scaleX(1);
+}
+
+.a-input input {
+  height: 48px;
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  color: #fafafa;
+  outline: none;
+}
+
+.a-input input::placeholder {
+  color: rgb(255 255 255 / 0.48);
+}
+
+.a-input input:-webkit-autofill,
+.a-input input:-webkit-autofill:hover,
+.a-input input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #fafafa;
+  transition: background-color 9999s ease-out 0s;
+  caret-color: #fafafa;
+}
+
+.a-field[data-invalid="true"] .a-input {
+  border-color: rgb(229 143 143 / 0.55);
+  background-color: rgb(229 143 143 / 0.05);
+}
+
+.a-field[data-invalid="true"] .a-input::after {
+  background: rgb(229 143 143 / 0.85);
+  transform: scaleX(1);
+}
+
+.a-field[data-invalid="true"] .a-input:focus-within {
+  box-shadow: 0 0 0 4px rgb(229 143 143 / 0.07);
+}
+
+/* Primary action: a white sheet that lifts, presses and sweeps light across
+   itself while the server answers. */
+.a-submit {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 10px;
+  transition:
+    transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 180ms ease,
+    opacity 180ms ease;
+}
+
+.a-submit:hover:not(:disabled) {
+  transform: translate3d(0, -1px, 0);
+  background-color: #ffffff;
+}
+
+.a-submit:active:not(:disabled) {
+  transform: translate3d(0, 0, 0) scale(0.994);
+  transition-duration: 80ms;
+}
+
+.a-submit-arrow {
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.a-submit:hover:not(:disabled) .a-submit-arrow {
+  transform: translate3d(3px, 0, 0);
+}
+
+.a-submit[data-busy="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(100deg, transparent 30%, rgb(9 9 11 / 0.09) 48%, transparent 66%);
+  background-size: 220% 100%;
+  animation: a-sweep 1.35s ease-in-out infinite;
+}
+
+@keyframes a-sweep {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+
+.a-spin {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1.6px solid rgb(9 9 11 / 0.22);
+  border-top-color: #09090b;
+  animation: a-spin 720ms linear infinite;
+}
+
+@keyframes a-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error: one short shake of the field group, never the whole page. */
+.a-shake {
+  animation: a-shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes a-shake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  18% {
+    transform: translate3d(-3px, 0, 0);
+  }
+  38% {
+    transform: translate3d(3px, 0, 0);
+  }
+  58% {
+    transform: translate3d(-2px, 0, 0);
+  }
+  78% {
+    transform: translate3d(1px, 0, 0);
+  }
+}
+
+.a-check {
+  animation: a-check 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes a-check {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The hairline that separates the gate from its fine print. */
+.a-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.12), transparent);
+}

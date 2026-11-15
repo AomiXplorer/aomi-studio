@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { LiveClock } from "@/components/auth/LiveClock";
 import { loadAuthConfig, ownerWhatsApp } from "@/lib/auth/config";
@@ -13,6 +14,12 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+/**
+ * The gate. One dark room, one light source, and Astra standing in it — the
+ * artwork carries the identity, the type carries the hierarchy, and the form is
+ * the only thing that asks for anything. Mono is kept as a whisper (labels,
+ * captions, the clock) instead of doing the structural work it used to do.
+ */
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string | string[] }> }) {
   const params = await searchParams;
   const state = await loadAuthConfig();
@@ -22,163 +29,156 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const tools = toolNames();
 
   return (
-    <main lang="en" className="relative flex min-h-dvh flex-col overflow-hidden bg-[#09090b] text-[#fafafa]">
-      {/* Astra, kept as a quiet ground so the form stays the loudest thing on screen. */}
-      <Image
-        src="/astra.webp"
-        alt=""
-        aria-hidden
-        width={736}
-        height={563}
-        priority
-        className="pointer-events-none absolute -right-16 -top-16 hidden h-[62vh] w-auto select-none opacity-[0.16] [mask-image:linear-gradient(to_bottom_left,black,transparent_72%)] lg:block"
-      />
+    <main lang="en" className="a-room relative flex min-h-dvh flex-col overflow-hidden">
+      <div className="a-glow" aria-hidden />
+      <div className="a-grain" aria-hidden />
 
-      <header className="sh-enter flex items-center justify-between border-b border-[#1c1c20] px-5 py-4 sm:px-8">
-        <div className="flex items-center gap-3">
+      {/* Header: 54px on a phone, 58px on a desk. It frames the room, it does not lead it. */}
+      <header className="relative z-20 flex h-[54px] shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] bg-[#08080a]/70 px-4 backdrop-blur-xl sm:h-[58px] sm:px-7">
+        <Link
+          href="/"
+          className="group flex items-center gap-2.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a]"
+        >
           <span
-            className="grid size-7 place-items-center border border-[#3a3a3f] text-[13px] font-semibold leading-none"
             aria-hidden
+            className="relative grid size-[26px] place-items-center rounded-[7px] border border-white/15 bg-white/[0.04] text-[12.5px] font-semibold leading-none text-white/90 transition-colors duration-200 group-hover:border-white/30 group-hover:text-white"
           >
             a
+            <span className="absolute inset-x-1.5 -bottom-px h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
           </span>
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-[#a1a1aa]">aomi studio</span>
-        </div>
-        <div className="flex items-center gap-3 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#8b8b96]">
-          <span className="hidden items-center gap-2 sm:flex">
-            <span className="size-1.5 bg-[#fafafa]" aria-hidden />
-            owner session
+          <span className="font-mono text-[10px] uppercase tracking-[0.26em] text-white/70 transition-colors duration-200 group-hover:text-white">
+            aomi studio
           </span>
-          <span className="hidden text-[#3a3a3f] sm:inline" aria-hidden>
-            /
+        </Link>
+
+        <div className="flex items-center gap-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">
+          <span className="hidden items-center gap-1.5 sm:flex">
+            <span
+              aria-hidden
+              className="size-1.5 rounded-full bg-[#86c9a4] shadow-[0_0_8px_rgba(134,201,164,0.65)]"
+            />
+            private access
           </span>
-          <LiveClock />
-          <span className="text-[#8b8b96]">wib</span>
+          <span className="hidden h-3 w-px bg-white/10 sm:block" aria-hidden />
+          <span className="tabular-nums text-white/70">
+            <LiveClock />
+          </span>
+          <span className="text-white/30">wib</span>
         </div>
       </header>
 
-
-      {/* Astra on narrow screens: the rail is desktop-only, so the artwork gets its own band. */}
-      <div className="relative h-[104px] shrink-0 overflow-hidden border-b border-[#1c1c20] lg:hidden">
-        <Image
-          src="/astra.webp"
-          alt="Astra, the character Aomi is named alongside"
-          width={736}
-          height={563}
-          priority
-          sizes="100vw"
-          className="h-full w-full select-none object-cover object-[50%_34%] opacity-90 grayscale"
-        />
-        <span
+      <div className="relative z-10 flex flex-1 flex-col lg:min-h-0">
+        {/* Astra on a phone: a short band, cropped above the chin, with the name kept small.
+            It fades into the page so the form never looks like it sits under a photo. */}
+        <section
           aria-hidden
-          className="absolute inset-0 bg-[linear-gradient(to_top,#09090b_0%,rgba(9,9,11,0.12)_58%,rgba(9,9,11,0))]"
-        />
-        <p className="absolute bottom-2.5 left-5 font-mono text-[10px] uppercase tracking-[0.24em] text-[#e4e4e7]">
-          astra
-        </p>
-      </div>
-
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="flex items-center px-5 py-7 sm:px-8 sm:py-10 lg:px-14">
-          <div className="w-full max-w-[520px]">
-            <p
-              className="sh-enter flex items-center gap-1.5 font-mono text-[11px] text-[#8b8b96]"
-              style={{ "--sh-delay": "60ms" } as React.CSSProperties}
-            >
-              ~/aomi
-              <span className="text-[#8b8b96]" aria-hidden>
-                /
-              </span>
-              login
-              <span className="aomi-caret ml-1" aria-hidden />
-            </p>
-
-            <h1
-              className="sh-enter mt-5 text-[26px] font-medium leading-[1.15] tracking-[-0.025em] text-[#fafafa] sm:text-[30px]"
-              style={{ "--sh-delay": "120ms" } as React.CSSProperties}
-            >
-              Sign in to workspace
-            </h1>
-            <p
-              className="sh-enter mt-3 font-mono text-[11px] uppercase tracking-[0.3em] text-[#a1a1aa]"
-              style={{ "--sh-delay": "180ms" } as React.CSSProperties}
-            >
-              AI AGENT X ASTRA
-            </p>
-
-            <div className="sh-enter mt-9" style={{ "--sh-delay": "260ms" } as React.CSSProperties}>
-              <LoginForm
-                next={next}
-                whatsapp={ownerWhatsApp(state)}
-                configured={Boolean(state.config)}
-                priceLabel={`Rp${accessPriceIdr().toLocaleString("id-ID")}`}
-              />
-            </div>
-          </div>
+          className="relative h-[168px] shrink-0 overflow-hidden border-b border-white/[0.06] sm:h-[192px] md:h-[224px] lg:hidden"
+        >
+          <Image
+            src="/astra.webp"
+            alt=""
+            width={736}
+            height={563}
+            priority
+            sizes="100vw"
+            className="a-hero-img h-full w-full select-none object-cover object-[52%_44%] grayscale"
+          />
+          <span
+            aria-hidden
+            className="absolute inset-0 bg-[linear-gradient(to_top,#08080a_2%,rgba(8,8,10,0.55)_38%,rgba(8,8,10,0.05)_78%)]"
+          />
+          <span
+            aria-hidden
+            className="absolute inset-0 bg-[radial-gradient(120%_100%_at_70%_0%,transparent_35%,rgba(8,8,10,0.6)_100%)]"
+          />
+          <span className="a-hero-scan" aria-hidden />
+          <p className="absolute bottom-3 left-5 font-mono text-[9.5px] uppercase tracking-[0.3em] text-white/60">
+            astra
+          </p>
+          <p className="absolute bottom-3 right-5 font-mono text-[9.5px] uppercase tracking-[0.3em] text-white/30">
+            ai agent
+          </p>
         </section>
 
-        <aside className="hidden min-h-0 overflow-hidden border-l border-[#1c1c20] lg:flex lg:flex-col" aria-label="Tools the agent can call">
-          <div className="relative h-[176px] shrink-0 border-b border-[#1c1c20]">
+        <div className="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(392px,44%)]">
+          {/* Desktop: the artwork gets the left half, full bleed, and the form gets a
+              column deliberately narrower than the space it sits in. */}
+          <section className="relative hidden overflow-hidden border-r border-white/[0.06] lg:block">
             <Image
               src="/astra.webp"
               alt="Astra, the character Aomi is named alongside"
               width={736}
               height={563}
               priority
-              sizes="300px"
-              className="h-full w-full select-none object-cover object-top grayscale"
+              sizes="56vw"
+              className="a-hero-img h-full w-full select-none object-cover object-[54%_38%] grayscale"
             />
             <span
               aria-hidden
-              className="absolute inset-x-0 bottom-0 h-16 bg-[linear-gradient(to_top,#09090b_10%,rgba(9,9,11,0))]"
+              className="absolute inset-0 bg-[linear-gradient(to_top,#08080a_0%,rgba(8,8,10,0.72)_26%,rgba(8,8,10,0.08)_62%,rgba(8,8,10,0.35)_100%)]"
             />
-            <p className="absolute bottom-3 left-5 font-mono text-[10px] uppercase tracking-[0.24em] text-[#e4e4e7]">
-              astra
-            </p>
-          </div>
+            <span
+              aria-hidden
+              className="absolute inset-0 bg-[radial-gradient(90%_80%_at_76%_18%,transparent_30%,rgba(8,8,10,0.55)_100%)]"
+            />
+            <span className="a-hero-scan" aria-hidden />
 
-          <div className="flex items-center justify-between border-b border-[#1c1c20] px-5 py-4">
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#8b8b96]">agent tools</p>
-            <span className="font-mono text-[10px] text-[#8b8b96]">{tools.length}</span>
-          </div>
+            <div className="absolute inset-x-0 bottom-0 p-9 xl:p-12">
+              <div className="a-rise max-w-[34ch]" style={{ "--i": 3 } as React.CSSProperties}>
+                <p className="font-mono text-[9.5px] uppercase tracking-[0.34em] text-white/50">character</p>
+                <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.34em] text-white/90">astra</p>
+                <p className="mt-4 text-[13.5px] leading-relaxed text-white/50">
+                  An agent with a face, a workspace, and files that are really yours.
+                </p>
+                <span aria-hidden className="a-rule mt-6 block w-24" />
+                <p className="mt-4 font-mono text-[9.5px] uppercase tracking-[0.22em] text-white/50">
+                  {tools.length} tools · 8h session · csp
+                </p>
+              </div>
+            </div>
+          </section>
 
-          <div className="sh-ticker relative min-h-0 flex-1 overflow-hidden">
-            <ul className="sh-ticker-track absolute inset-x-0 top-0">
-              {tools.map((name, index) => (
-                <li
-                  key={name}
-                  className="flex items-baseline justify-between border-b border-[#18181b] px-5 py-[9px] font-mono text-[11px] text-[#a1a1aa]"
-                >
-                  <span>{name}</span>
-                  <span className="text-[#8b8b96]">{String(index + 1).padStart(2, "0")}</span>
-                </li>
-              ))}
-              {tools.map((name, index) => (
-                <li
-                  key={`${name}-loop`}
-                  aria-hidden
-                  className="flex items-baseline justify-between border-b border-[#18181b] px-5 py-[9px] font-mono text-[11px] text-[#a1a1aa]"
-                >
-                  <span>{name}</span>
-                  <span className="text-[#8b8b96]">{String(index + 1).padStart(2, "0")}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* The form column. On a phone it starts right under the band; on a desk it is
+              centred in the remaining half, at a measure you can read without turning. */}
+          <section className="flex flex-1 items-start px-5 pb-9 pt-7 sm:px-8 sm:pt-9 lg:items-center lg:px-12 lg:py-14 xl:px-16">
+            <div className="mx-auto w-full max-w-[420px] lg:mx-0">
+              <p
+                className="a-rise font-mono text-[9.5px] uppercase tracking-[0.34em] text-white/50"
+                style={{ "--i": 0 } as React.CSSProperties}
+              >
+                ai agent × astra
+              </p>
 
-          <div className="border-t border-[#1c1c20] px-5 py-4">
-            <p className="font-mono text-[10px] leading-relaxed text-[#8b8b96]">
-              real files
-              <br />
-              real zip export
-            </p>
-          </div>
-        </aside>
+              <h1
+                className="a-rise mt-3.5 text-[27px] font-medium leading-[1.1] tracking-[-0.03em] text-white sm:text-[32px]"
+                style={{ "--i": 1 } as React.CSSProperties}
+              >
+                Sign in to workspace
+              </h1>
+
+              <p
+                className="a-rise mt-2.5 text-[13.5px] leading-relaxed text-white/55"
+                style={{ "--i": 2 } as React.CSSProperties}
+              >
+                Welcome back. Ready when you are.
+              </p>
+
+              <div className="a-rise mt-7" style={{ "--i": 3 } as React.CSSProperties}>
+                <LoginForm
+                  next={next}
+                  whatsapp={ownerWhatsApp(state)}
+                  configured={Boolean(state.config)}
+                  priceLabel={`Rp${accessPriceIdr().toLocaleString("id-ID")}`}
+                />
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
 
-      <footer className="sh-enter flex flex-col gap-1.5 border-t border-[#1c1c20] px-5 py-4 font-mono text-[10px] uppercase tracking-[0.16em] text-[#8b8b96] sm:flex-row sm:items-center sm:justify-between sm:px-8">
-        <p>httponly cookie · 8-hour session · csp</p>
-        <p>aomi studio — private access</p>
+      <footer className="relative z-10 flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.06] px-4 py-3.5 font-mono text-[9.5px] uppercase tracking-[0.18em] text-white/50 sm:px-7">
+        <p>httponly cookie · 8h session</p>
+        <p className="hidden sm:block">aomi studio — private access</p>
       </footer>
     </main>
   );
