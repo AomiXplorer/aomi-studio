@@ -88,8 +88,8 @@ export function Landing({ tools, priceLabel }: { tools: string[]; priceLabel: st
 
   return (
     <div id="top" ref={room} className="a-room land-room relative min-h-dvh overflow-x-clip">
+      {/* Light only: the printed grid texture that suits the gate reads as a HUD here. */}
       <div className="a-glow" aria-hidden />
-      <div className="a-grain" aria-hidden />
 
       <a
         href="#content"
