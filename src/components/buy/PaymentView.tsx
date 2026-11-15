@@ -35,6 +35,8 @@ interface StatusResponse {
 }
 
 const POLL_MS = 5_000;
+/** How long a finished (cancelled or expired) screen stays up before the room closes. */
+const EXIT_MS = 4_000;
 
 function clock(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -49,6 +51,10 @@ function clock(ms: number): string {
  * The QR is the provider's own image, the amount is what the provider asked for, and the
  * status only changes when the provider says so. Polling is a fallback for a late webhook,
  * never a way to "confirm" a payment locally.
+ *
+ * A dead order never leaves someone staring at a stale QR: cancelling, or letting the QR
+ * lapse, closes the shop and walks them back to the sign-in page with one line explaining
+ * what happened.
  */
 export function PaymentView({ orderId, token }: { orderId: string; token: string }) {
   const router = useRouter();
@@ -59,9 +65,10 @@ export function PaymentView({ orderId, token }: { orderId: string; token: string
   const [notice, setNotice] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
+  const [leaving, setLeaving] = useState<null | { to: "cancelled" | "expired"; in: number }>(null);
   const [now, setNow] = useState(() => Date.now());
   const stopped = useRef(false);
+  const exitTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const query = useMemo(() => `t=${encodeURIComponent(token)}`, [token]);
 
@@ -123,6 +130,41 @@ export function PaymentView({ orderId, token }: { orderId: string; token: string
     }
   }, [order, orderId, query, ready, router]);
 
+  const remaining = order?.expiresAt ? Date.parse(order.expiresAt) - now : 0;
+  const expired = Boolean(order) && order?.status === "pending" && remaining <= 0;
+  const dead = Boolean(order) && (order?.status === "expired" || order?.status === "cancelled" || expired);
+
+  /** Counts down a dead order out of the shop and back to the sign-in page. */
+  const exitTo = useCallback(
+    (to: "cancelled" | "expired") => {
+      if (leaving || exitTimer.current) return;
+      setLeaving({ to, in: Math.round(EXIT_MS / 1000) });
+      exitTimer.current = setInterval(() => {
+        setLeaving((current) => {
+          if (!current) return current;
+          const next = current.in - 1;
+          if (next <= 0) {
+            if (exitTimer.current) clearInterval(exitTimer.current);
+            exitTimer.current = null;
+            router.replace(`/login?status=${to}`);
+            return null;
+          }
+          return { ...current, in: next };
+        });
+      }, 1000);
+    },
+    [leaving, router],
+  );
+
+  useEffect(() => () => {
+    if (exitTimer.current) clearInterval(exitTimer.current);
+  }, []);
+
+  // A lapsed QR closes itself, the same way a cancelled one does.
+  useEffect(() => {
+    if (dead) exitTo("expired");
+  }, [dead, exitTo]);
+
   async function copyAmount() {
     if (!order) return;
     const value = String(order.payableAmount);
@@ -147,7 +189,8 @@ export function PaymentView({ orderId, token }: { orderId: string; token: string
       }
       merge(payload || {});
       if (payload?.order) setOrder(payload.order);
-      setNotice("Pembayaran dibatalkan. QRIS ini tidak diproses lagi.");
+      setNotice("Pembayaran dibatalkan. Tidak ada biaya yang dikenakan.");
+      exitTo("cancelled");
     } catch {
       setError("Server tidak bisa dihubungi. Coba lagi.");
     } finally {
@@ -155,52 +198,9 @@ export function PaymentView({ orderId, token }: { orderId: string; token: string
     }
   }
 
-  async function regenerate() {
-    if (regenerating || !order) return;
-    setRegenerating(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/purchase/order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: order.email, username: order.username }),
-        cache: "no-store",
-      });
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: { message?: string }; order?: { id: string }; token?: string }
-        | null;
-      if (!response.ok || !payload?.order || !payload.token) {
-        setError(payload?.error?.message || "Gagal membuat QRIS baru.");
-        return;
-      }
-      router.replace(
-        `/buy/pay?order=${encodeURIComponent(payload.order.id)}&t=${encodeURIComponent(payload.token)}`,
-      );
-    } catch {
-      setError("Server tidak bisa dihubungi. Coba lagi.");
-    } finally {
-      setRegenerating(false);
-    }
-  }
-
-  const remaining = order?.expiresAt ? Date.parse(order.expiresAt) - now : 0;
-  const expired = Boolean(order) && order?.status === "pending" && remaining <= 0;
-  const statusLabel =
-    order?.status === "paid"
-      ? ready
-        ? "Pembayaran terverifikasi"
-        : "Pembayaran diterima, menyiapkan akun"
-      : order?.status === "expired" || expired
-        ? "QRIS kedaluwarsa"
-        : order?.status === "cancelled"
-          ? "Dibatalkan"
-          : order?.status === "failed"
-            ? "Pembayaran gagal"
-            : "Menunggu pembayaran";
-
   if (loading && !order) {
     return (
-      <div className="mt-10 flex items-center gap-3 font-mono text-[11.5px] uppercase tracking-[0.16em] text-[#8b8b96]">
+      <div className="mt-10 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/55">
         <Loader2 className="size-4 animate-spin" aria-hidden />
         memuat qris
       </div>
@@ -209,192 +209,208 @@ export function PaymentView({ orderId, token }: { orderId: string; token: string
 
   if (!order) {
     return (
-      <div className="mt-8 border border-[#27272a] p-5">
-        <p className="text-[14px] text-[#fafafa]">Pembayaran ini tidak bisa dibuka.</p>
-        <p className="mt-2 font-mono text-[11.5px] leading-relaxed text-[#8b8b96]">
+      <div className="a-rise mt-8 rounded-lg border border-white/[0.08] bg-white/[0.02] p-5">
+        <p className="text-[14.5px] font-medium text-white/90">Pembayaran ini tidak bisa dibuka.</p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-white/50">
           {error || "Link pembayaran tidak valid atau sudah diganti dengan yang baru."}
         </p>
-        <Link
-          href="/buy"
-          className="mt-4 inline-flex h-10 items-center gap-2 bg-[#fafafa] px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-[#09090b]"
-        >
-          Mulai pembelian baru
-        </Link>
+        <div className="mt-5 flex flex-wrap items-center gap-2.5">
+          <Link
+            href="/login"
+            className="inline-flex h-11 items-center gap-2 rounded-md bg-[#fafafa] px-4 text-[13px] font-semibold text-[#09090b] transition-colors duration-150 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a]"
+          >
+            Kembali ke login
+          </Link>
+          <Link
+            href="/buy"
+            className="inline-flex h-11 items-center rounded-md border border-white/10 px-4 font-mono text-[9.5px] uppercase tracking-[0.16em] text-white/55 transition-colors duration-150 hover:border-white/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          >
+            mulai pembelian baru
+          </Link>
+        </div>
       </div>
     );
   }
 
   const payable = order.payableAmount || order.requestedAmount;
+  const paid = order.status === "paid";
+  const statusLabel = paid
+    ? ready
+      ? "Pembayaran terverifikasi"
+      : "Pembayaran diterima, menyiapkan akun"
+    : order.status === "cancelled"
+      ? "Dibatalkan"
+      : order.status === "expired" || expired
+        ? "QRIS kedaluwarsa"
+        : order.status === "failed"
+          ? "Pembayaran gagal"
+          : "Menunggu pembayaran";
+  const tone = paid ? "#86c9a4" : dead ? "#e58f8f" : "#fafafa";
 
   return (
-    <div className="sh-enter mt-7" style={{ "--sh-delay": "140ms" } as React.CSSProperties}>
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[26px] font-medium leading-[1.15] tracking-[-0.025em] text-[#fafafa] sm:text-[30px]">
-            {order.status === "paid" ? "Pembayaran diterima" : "Scan QRIS untuk bayar"}
-          </h1>
-          <p className="mt-2 max-w-[46ch] text-[13.5px] leading-relaxed text-[#a1a1aa]">
-            Silakan scan QRIS untuk menyelesaikan pembelian Aomi. Bayar tepat sejumlah nominal di bawah, termasuk kode unik.
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-[#1c1c20] py-3 font-mono text-[10.5px] uppercase tracking-[0.14em]">
-        <span className="flex items-center gap-2 text-[#d4d4d8]">
+    <div className="mt-6">
+      <div className="a-rise flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[9.5px] uppercase tracking-[0.16em]">
+        <span className="flex items-center gap-2 text-white/70">
           <span
-            className={`size-1.5 ${order.status === "paid" ? "bg-[#86c9a4]" : expired ? "bg-[#e58f8f]" : "bg-[#fafafa] animate-pulse"}`}
             aria-hidden
+            className={`size-1.5 rounded-full ${dead ? "" : "animate-pulse"}`}
+            style={{ background: tone, boxShadow: `0 0 8px ${tone}66` }}
           />
           {statusLabel}
         </span>
-        <span className="text-[#3a3a3f]" aria-hidden>
-          /
+        <span aria-hidden className="h-3 w-px bg-white/10" />
+        <span className="tabular-nums text-white/55">
+          {order.status === "pending" && !expired ? `sisa ${clock(remaining)}` : order.transactionId || order.id}
         </span>
-        <span className="text-[#8b8b96]">
-          {order.status === "pending" ? `sisa ${clock(remaining)}` : order.transactionId || order.id}
-        </span>
-        <span className="text-[#3a3a3f]" aria-hidden>
-          /
-        </span>
-        <span className="text-[#8b8b96]">{order.transactionId || order.id}</span>
       </div>
 
-      <div className="mt-6 grid gap-5 sm:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
-        <div className="pay-fade mx-auto w-full max-w-[260px] rounded-lg bg-white p-3">
+      <div className="a-rise mt-4" style={{ "--i": 1 } as React.CSSProperties}>
+        <h1 className="text-[26px] font-medium leading-[1.1] tracking-[-0.03em] text-white sm:text-[32px]">
+          {paid ? "Pembayaran diterima." : dead ? "Pesanan ini sudah ditutup." : "Scan untuk menyelesaikan."}
+        </h1>
+        <p className="mt-2.5 max-w-[46ch] text-[13px] leading-relaxed text-white/55">
+          {paid
+            ? "Akun kamu sedang disiapkan. Halaman ini akan berpindah sendiri begitu kredensial terkirim."
+            : dead
+              ? leaving
+                ? `Kembali ke halaman login dalam ${leaving.in} detik.`
+                : "QRIS ini tidak bisa dibayar lagi. Kembali ke login untuk mulai dari awal."
+              : "Satu QRIS, satu kali bayar. Nominal harus sama persis supaya pembayaran terbaca otomatis."}
+        </p>
+      </div>
+
+      <div className="a-rise mt-6 grid gap-5 sm:grid-cols-[minmax(0,232px)_minmax(0,1fr)]" style={{ "--i": 2 } as React.CSSProperties}>
+        {/* The QR keeps a white bed and four corner ticks: it must read as a scanner target,
+            never as part of the dark interface around it. */}
+        <div className="relative mx-auto w-full max-w-[232px] self-start rounded-lg bg-white p-3">
+          <span aria-hidden className="pointer-events-none absolute left-1 top-1 size-2.5 border-l border-t border-[#09090b]/25" />
+          <span aria-hidden className="pointer-events-none absolute right-1 top-1 size-2.5 border-r border-t border-[#09090b]/25" />
+          <span aria-hidden className="pointer-events-none absolute bottom-1 left-1 size-2.5 border-b border-l border-[#09090b]/25" />
+          <span aria-hidden className="pointer-events-none absolute bottom-1 right-1 size-2.5 border-b border-r border-[#09090b]/25" />
           {order.qrImage ? (
-            <img
-              src={order.qrImage}
-              alt="QRIS pembayaran Aomi"
-              width={236}
-              height={236}
-              className="block w-full rounded-md"
-            />
+            <img src={order.qrImage} alt="QRIS pembayaran Aomi" width={208} height={208} className="pay-fade block w-full rounded-sm" />
           ) : (
-            <div className="grid aspect-square w-full place-items-center rounded-md bg-[#f4f4f6] font-mono text-[10px] uppercase tracking-[0.14em] text-[#52525b]">
+            <div className="grid aspect-square w-full place-items-center rounded-sm bg-[#f4f4f6] font-mono text-[9px] uppercase tracking-[0.14em] text-[#52525b]">
               qris tidak tersedia
             </div>
           )}
+          <p className="mt-2 text-center font-mono text-[8.5px] uppercase tracking-[0.2em] text-[#71717a]">
+            qris · austinpay
+          </p>
         </div>
 
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#8b8b96]">nominal yang harus dibayar</p>
-          <p className="mt-1.5 font-mono text-[30px] leading-none tabular-nums tracking-[-0.02em] text-[#fafafa]">
-            {rupiah(payable)}
-          </p>
-          <p className="mt-2 font-mono text-[11px] leading-relaxed text-[#8b8b96]">
+          <p className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-white/55">nominal tepat</p>
+          <div className="mt-1.5 flex items-baseline gap-3">
+            <p className="font-mono text-[32px] leading-none tabular-nums tracking-[-0.03em] text-white sm:text-[38px]">
+              {rupiah(payable)}
+            </p>
+            <button
+              type="button"
+              onClick={() => void copyAmount()}
+              className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-white/55 transition-colors duration-150 hover:border-white/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            >
+              <Copy className="size-3" aria-hidden />
+              salin
+            </button>
+          </div>
+          <p className="mt-2 font-mono text-[10px] leading-relaxed text-white/50">
             {order.requestedAmount === payable
               ? "sudah termasuk biaya layanan"
-              : `${rupiah(order.requestedAmount)} + biaya QRIS ${rupiah(Math.max(0, payable - order.requestedAmount))}`}
+              : `${rupiah(order.requestedAmount)} + biaya qris ${rupiah(Math.max(0, payable - order.requestedAmount))}`}
           </p>
 
-          <dl className="mt-5 divide-y divide-[#1c1c20] border-y border-[#1c1c20] font-mono text-[11.5px]">
+          <dl className="mt-5 divide-y divide-white/[0.06] border-y border-white/[0.06] text-[12px]">
             <div className="flex items-baseline justify-between gap-3 py-2.5">
-              <dt className="text-[#8b8b96]">produk</dt>
-              <dd className="text-[#d4d4d8]">Aomi AI Access</dd>
+              <dt className="text-white/55">username</dt>
+              <dd className="max-w-[62%] truncate font-mono text-white/85">{order.username}</dd>
             </div>
             <div className="flex items-baseline justify-between gap-3 py-2.5">
-              <dt className="text-[#8b8b96]">username</dt>
-              <dd className="max-w-[60%] truncate text-[#d4d4d8]">{order.username}</dd>
+              <dt className="text-white/55">email</dt>
+              <dd className="max-w-[62%] truncate font-mono text-white/85" title={order.email}>
+                {order.email}
+              </dd>
             </div>
             <div className="flex items-baseline justify-between gap-3 py-2.5">
-              <dt className="text-[#8b8b96]">email</dt>
-              <dd className="max-w-[60%] truncate text-[#d4d4d8]">{order.email}</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-3 py-2.5">
-              <dt className="text-[#8b8b96]">transaction id</dt>
-              <dd className="max-w-[60%] truncate text-[#d4d4d8]">{order.transactionId || "—"}</dd>
+              <dt className="text-white/55">order</dt>
+              <dd className="max-w-[62%] truncate font-mono text-white/60">{order.id}</dd>
             </div>
           </dl>
 
-          <div className="mt-5 flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => void fetchStatus(true)}
-              disabled={checking}
-              className="sh-submit flex h-11 items-center justify-between gap-3 bg-[#fafafa] px-4 text-[11.5px] font-semibold uppercase tracking-[0.14em] text-[#09090b] transition-colors hover:bg-[#d4d4d8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa] focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090b] disabled:cursor-wait disabled:bg-[#18181b] disabled:text-[#8b8b96]"
-            >
-              <span className="flex items-center gap-2">
-                {checking ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <RefreshCw className="size-3.5" aria-hidden />}
-                {checking ? "Memeriksa" : "Check Payment Status"}
-              </span>
-            </button>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => void copyAmount()}
-                className="flex h-10 items-center justify-center gap-2 border border-[#27272a] font-mono text-[11px] uppercase tracking-[0.12em] text-[#a1a1aa] transition-colors hover:border-[#3a3a3f] hover:text-[#fafafa]"
+          {dead ? (
+            <div className="mt-5 flex flex-wrap items-center gap-2.5">
+              <Link
+                href="/login"
+                className="inline-flex h-11 items-center gap-2 rounded-md bg-[#fafafa] px-4 text-[13px] font-semibold text-[#09090b] transition-colors duration-150 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a]"
               >
-                <Copy className="size-3.5" aria-hidden />
-                Copy Amount
-              </button>
-              <button
-                type="button"
-                onClick={() => void cancel()}
-                disabled={cancelling || order.status !== "pending"}
-                className="flex h-10 items-center justify-center gap-2 border border-[#27272a] font-mono text-[11px] uppercase tracking-[0.12em] text-[#8b8b96] transition-colors hover:border-[#e58f8f]/40 hover:text-[#e58f8f] disabled:cursor-not-allowed disabled:opacity-45"
+                Kembali ke login
+              </Link>
+              <Link
+                href="/buy"
+                className="inline-flex h-11 items-center rounded-md border border-white/10 px-4 font-mono text-[9.5px] uppercase tracking-[0.16em] text-white/55 transition-colors duration-150 hover:border-white/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
               >
-                <X className="size-3.5" aria-hidden />
-                {cancelling ? "Membatalkan" : "Cancel Payment"}
-              </button>
+                beli lagi
+              </Link>
             </div>
-          </div>
+          ) : (
+            <div className="mt-5 space-y-2">
+              <button
+                type="button"
+                onClick={() => void fetchStatus(true)}
+                disabled={checking}
+                className="a-submit flex h-12 w-full items-center justify-center gap-2 bg-[#fafafa] text-[13.5px] font-semibold tracking-[-0.01em] text-[#09090b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a] disabled:cursor-wait disabled:bg-white/10 disabled:text-white/55"
+              >
+                {checking ? (
+                  <>
+                    <span className="a-spin" aria-hidden />
+                    Memeriksa pembayaran
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="size-4" aria-hidden />
+                    Cek status pembayaran
+                  </>
+                )}
+              </button>
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-mono text-[9px] uppercase leading-relaxed tracking-[0.14em] text-white/50">
+                  dicek otomatis tiap 5 detik
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void cancel()}
+                  disabled={cancelling || order.status !== "pending"}
+                  className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-white/50 transition-colors duration-150 hover:text-[#e58f8f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <X className="size-3.5" aria-hidden />
+                  {cancelling ? "membatalkan" : "batalkan & kembali ke login"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      <div aria-live="polite" className="mt-5 min-h-[38px]">
+      <div aria-live="polite" className="mt-5 min-h-[36px]">
         {error ? (
-          <p role="alert" className="flex items-start gap-2 font-mono text-[11.5px] leading-relaxed text-[#e58f8f]">
-            <span aria-hidden>!</span>
+          <p role="alert" className="flex items-start gap-2 text-[12px] leading-relaxed text-[#e58f8f]">
+            <span aria-hidden className="mt-px font-mono">
+              !
+            </span>
             <span>{error}</span>
           </p>
         ) : notice ? (
-          <p className="flex items-start gap-2 font-mono text-[11.5px] leading-relaxed text-[#86c9a4]">
+          <p className="flex items-start gap-2 text-[12px] leading-relaxed text-[#86c9a4]">
             <Check className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             <span>{notice}</span>
           </p>
         ) : (
-          <p className="flex items-start gap-2 font-mono text-[11.5px] leading-relaxed text-[#8b8b96]">
+          <p className="flex items-start gap-2 font-mono text-[9.5px] uppercase leading-relaxed tracking-[0.14em] text-white/50">
             <ShieldCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span>
-              status dicek otomatis tiap 5 detik. akun dibuat hanya setelah pembayaran benar-benar terverifikasi.
-            </span>
+            <span>akun dibuat hanya setelah pembayaran terverifikasi server</span>
           </p>
         )}
       </div>
-
-      {expired || order.status === "expired" ? (
-        <div className="mt-4 border border-[#27272a] bg-[#111113] p-4">
-          <p className="text-[13.5px] text-[#fafafa]">QRIS ini sudah kedaluwarsa.</p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#a1a1aa]">
-            Belum ada dana yang masuk, jadi belum ada akun yang dibuat. Buat QRIS baru untuk melanjutkan.
-          </p>
-          <button
-            type="button"
-            onClick={() => void regenerate()}
-            disabled={regenerating}
-            className="mt-3 inline-flex h-10 items-center gap-2 bg-[#fafafa] px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-[#09090b] disabled:cursor-wait disabled:bg-[#18181b] disabled:text-[#8b8b96]"
-          >
-            {regenerating ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <RefreshCw className="size-3.5" aria-hidden />}
-            Buat QRIS baru
-          </button>
-        </div>
-      ) : null}
-
-      {order.status === "cancelled" ? (
-        <div className="mt-4 border border-[#27272a] bg-[#111113] p-4">
-          <p className="text-[13.5px] text-[#fafafa]">Pembayaran dibatalkan.</p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#a1a1aa]">
-            Kalau berubah pikiran, kamu bisa mulai lagi dari awal. Kalau ternyata sudah terlanjur transfer, dana akan
-            tercatat dan bisa dibantu lewat owner.
-          </p>
-          <Link
-            href="/buy"
-            className="mt-3 inline-flex h-10 items-center bg-[#fafafa] px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-[#09090b]"
-          >
-            Mulai lagi
-          </Link>
-        </div>
-      ) : null}
     </div>
   );
 }

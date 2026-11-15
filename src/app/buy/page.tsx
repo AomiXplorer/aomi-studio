@@ -16,7 +16,7 @@ export default function BuyPage() {
   return (
     <BuyShell
       eyebrow="buy-access"
-      aside={["akun aomi aktif", "chat + workspace", "image & audio studio", "qris sekali bayar", "kredensial via email"]}
+      aside={["akun aomi aktif", "chat + workspace", "image & audio studio", "kredensial via email", "tanpa langganan"]}
     >
       <PurchaseFlow product={product} />
     </BuyShell>

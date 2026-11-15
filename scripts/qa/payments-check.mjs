@@ -118,7 +118,7 @@ async function main() {
   const buyPage = await http(`${BASE}/buy`);
   check(
     "1. /buy tampil dengan dua langkah dan tombol Buy",
-    buyPage.status === 200 && buyPage.text.includes("Let&#x27;s get started!") && buyPage.text.includes("Continue"),
+    buyPage.status === 200 && buyPage.text.includes("Let&#x27;s get started") && buyPage.text.includes("Continue"),
     `status ${buyPage.status}`,
   );
   const loginPage = await http(`${BASE}/login`);

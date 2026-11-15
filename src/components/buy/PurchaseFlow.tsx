@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, ArrowLeft, Mail, AtSign } from "lucide-react";
+import { ArrowRight, ArrowLeft, AtSign, Mail } from "lucide-react";
 import { rupiah } from "./BuyShell";
 
 interface Product {
@@ -15,13 +15,12 @@ interface Product {
 
 type Step = 1 | 2;
 
-const row = "grid grid-cols-[1.5rem_1px_minmax(0,1fr)] items-stretch";
-
 /**
- * Two steps, one question each.
+ * Two questions, one screen each.
  *
  * Both answers are checked by the server before the form moves on, so the summary the
- * buyer reads on step two is already a name and an address nobody else owns.
+ * buyer reads on step two is already a name and an address nobody else owns. Every exit
+ * leads back to the sign-in room rather than leaving someone parked on a dead form.
  */
 export function PurchaseFlow({ product }: { product: Product }) {
   const router = useRouter();
@@ -113,145 +112,168 @@ export function PurchaseFlow({ product }: { product: Product }) {
     [email, pending, router, username],
   );
 
-  return (
-    <div className="sh-enter mt-7" style={{ "--sh-delay": "140ms" } as React.CSSProperties}>
-      <div className="flex items-center gap-2" aria-hidden>
-        <span className={`h-[2px] flex-1 ${step >= 1 ? "bg-[#fafafa]" : "bg-[#27272a]"}`} />
-        <span className={`h-[2px] flex-1 ${step >= 2 ? "bg-[#fafafa]" : "bg-[#27272a]"}`} />
-      </div>
-      <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-[#8b8b96]">
-        langkah {step} dari 2
-      </p>
+  const invalid = Boolean(error);
 
-      <div className="mt-7 flex items-start justify-between gap-4">
+  return (
+    <div className="mt-6">
+      {/* Where you are, said once. The two segments are the whole progress bar. */}
+      <ol className="a-rise flex items-center gap-3" style={{ "--i": 1 } as React.CSSProperties}>
+        {[
+          { index: 1 as Step, label: "email" },
+          { index: 2 as Step, label: "username" },
+        ].map((item) => {
+          const active = step === item.index;
+          const done = step > item.index;
+          return (
+            <li key={item.label} className="flex flex-1 flex-col gap-1.5">
+              <span
+                aria-hidden
+                className={`h-px w-full transition-colors duration-300 ${
+                  active ? "bg-white/70" : done ? "bg-white/30" : "bg-white/10"
+                }`}
+              />
+              <span
+                className={`font-mono text-[9px] uppercase tracking-[0.22em] transition-colors duration-200 ${
+                  active ? "text-white/70" : "text-white/50"
+                }`}
+              >
+                {String(item.index).padStart(2, "0")} · {item.label}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="a-rise mt-7" style={{ "--i": 2 } as React.CSSProperties}>
+        <h1 className="text-[28px] font-medium leading-[1.08] tracking-[-0.035em] text-white sm:text-[34px]">
+          {step === 1 ? "Let's get started." : "Pick your handle."}
+        </h1>
+        <p className="mt-2.5 max-w-[44ch] text-[13.5px] leading-relaxed text-white/55">
+          {step === 1
+            ? "Satu email untuk menerima kredensial login. Tidak ada langganan, tidak ada tagihan berikutnya."
+            : "Username ini yang kamu pakai untuk masuk ke Aomi, dan bisa diganti nanti di dalam workspace."}
+        </p>
+      </div>
+
+      {/* The price, before the form asks for anything. */}
+      <div className="a-rise mt-6 flex items-center justify-between gap-4 rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 py-3.5" style={{ "--i": 3 } as React.CSSProperties}>
         <div>
-          <h1 className="text-[26px] font-medium leading-[1.15] tracking-[-0.025em] text-[#fafafa] sm:text-[30px]">
-            {step === 1 ? "Let's get started!" : "Choose your username"}
-          </h1>
-          <p className="mt-2 max-w-[46ch] text-[13.5px] leading-relaxed text-[#a1a1aa]">
-            {step === 1
-              ? "Masukkan email kamu untuk mendapatkan akses Aomi. Kredensial login dikirim ke alamat ini."
-              : "Tentukan username yang akan kamu gunakan untuk login ke Aomi."}
+          <p className="text-[13px] font-medium leading-snug tracking-[-0.01em] text-white/85">{product.name}</p>
+          <p className="mt-1 font-mono text-[9.5px] uppercase tracking-[0.18em] text-white/55">
+            akses penuh · qris · sekali bayar
           </p>
         </div>
-        <span className="mt-1 hidden shrink-0 items-center gap-2 border border-[#27272a] px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a1a1aa] sm:flex">
-          {step === 1 ? <Mail className="size-3" aria-hidden /> : <AtSign className="size-3" aria-hidden />}
-          {step === 1 ? "email" : "username"}
-        </span>
+        <p className="shrink-0 font-mono text-[19px] leading-none tabular-nums tracking-[-0.02em] text-white">
+          {rupiah(product.priceIdr)}
+        </p>
       </div>
 
       {step === 1 ? (
-        <form onSubmit={submitEmail} noValidate className="mt-8">
-          <div className={error ? "sh-shake" : undefined}>
-            <div className={`${row} sh-field`} data-invalid={Boolean(error)}>
-              <span className="sh-gutter pr-2 pt-4 font-mono text-[10px] leading-none text-[#8b8b96]">01</span>
-              <span className="bg-[#1c1c20]" aria-hidden />
-              <div className="sh-ruler px-4 pb-3.5 pt-3.5">
-                <label htmlFor="buy-email" className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#8b8b96]">
-                  Gmail / Email Address
-                </label>
-                <div className="flex items-baseline gap-2">
-                  <span className="select-none font-mono text-[13px] leading-none text-[#3a3a3f]" aria-hidden>
-                    ›
-                  </span>
-                  <input
-                    id="buy-email"
-                    name="email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    required
-                    autoFocus
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    aria-invalid={Boolean(error)}
-                    aria-describedby={error ? "buy-error" : undefined}
-                    placeholder="nama@gmail.com"
-                    className="w-full bg-transparent font-mono text-[14px] leading-none tracking-[-0.01em] text-[#fafafa] outline-none placeholder:text-[#52525b]"
-                  />
-                </div>
-              </div>
+        <form onSubmit={submitEmail} noValidate className="a-rise mt-6" style={{ "--i": 4 } as React.CSSProperties}>
+          <div className={`a-field ${error ? "a-shake" : ""}`} data-invalid={invalid}>
+            <div className="mb-1.5 flex items-baseline justify-between gap-2">
+              <label htmlFor="buy-email" className="text-[12px] font-medium tracking-[-0.01em] text-white/70">
+                Email
+              </label>
+              <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/20" aria-hidden>
+                kredensial dikirim ke sini
+              </span>
+            </div>
+            <div className="a-input">
+              <Mail className="size-4 shrink-0 text-white/55" aria-hidden />
+              <input
+                id="buy-email"
+                name="email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                required
+                autoFocus
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                aria-invalid={invalid}
+                aria-describedby={error ? "buy-error" : undefined}
+                placeholder="nama@gmail.com"
+              />
             </div>
           </div>
 
           <button
             type="submit"
             disabled={pending}
-            className="sh-submit mt-5 flex h-12 w-full items-center justify-between gap-3 bg-[#fafafa] px-4 text-[12px] font-semibold uppercase tracking-[0.14em] text-[#09090b] transition-colors hover:bg-[#d4d4d8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa] focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090b] disabled:cursor-wait disabled:bg-[#18181b] disabled:text-[#8b8b96]"
+            className="a-submit mt-5 flex h-12 w-full items-center justify-center gap-2 bg-[#fafafa] text-[13.5px] font-semibold tracking-[-0.01em] text-[#09090b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a] disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/55"
           >
-            <span className="flex items-center gap-2">
-              {pending ? "Memeriksa" : "Continue"}
-              {pending ? <span className="sh-dots" aria-hidden /> : null}
-            </span>
-            <ArrowRight className="size-3.5" aria-hidden />
+            {pending ? (
+              <>
+                <span className="a-spin" aria-hidden />
+                Memeriksa
+              </>
+            ) : (
+              <>
+                Continue
+                <ArrowRight className="a-submit-arrow size-4" aria-hidden />
+              </>
+            )}
           </button>
         </form>
       ) : (
-        <form onSubmit={submitUsername} noValidate className="mt-8">
-          <div className={error ? "sh-shake" : undefined}>
-            <div className={`${row} sh-field`} data-invalid={Boolean(error)}>
-              <span className="sh-gutter pr-2 pt-4 font-mono text-[10px] leading-none text-[#8b8b96]">02</span>
-              <span className="bg-[#1c1c20]" aria-hidden />
-              <div className="sh-ruler px-4 pb-3.5 pt-3.5">
-                <label htmlFor="buy-username" className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#8b8b96]">
-                  Username
-                </label>
-                <div className="flex items-baseline gap-2">
-                  <span className="select-none font-mono text-[13px] leading-none text-[#3a3a3f]" aria-hidden>
-                    ›
-                  </span>
-                  <input
-                    id="buy-username"
-                    name="username"
-                    type="text"
-                    autoComplete="username"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    required
-                    autoFocus
-                    minLength={3}
-                    maxLength={32}
-                    value={username}
-                    onChange={(event) => setUsername(event.target.value)}
-                    aria-invalid={Boolean(error)}
-                    aria-describedby={error ? "buy-error" : "buy-username-hint"}
-                    placeholder="mis. langitbiru"
-                    className="w-full bg-transparent font-mono text-[14px] leading-none tracking-[-0.01em] text-[#fafafa] outline-none placeholder:text-[#52525b]"
-                  />
-                </div>
-              </div>
+        <form onSubmit={submitUsername} noValidate className="a-rise mt-6" style={{ "--i": 4 } as React.CSSProperties}>
+          <div className={`a-field ${error ? "a-shake" : ""}`} data-invalid={invalid}>
+            <div className="mb-1.5 flex items-baseline justify-between gap-2">
+              <label htmlFor="buy-username" className="text-[12px] font-medium tracking-[-0.01em] text-white/70">
+                Username
+              </label>
+              <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/20" aria-hidden>
+                id login
+              </span>
             </div>
-            <p id="buy-username-hint" className="mt-2 pl-[calc(1.5rem+1px+1rem)] font-mono text-[10.5px] leading-relaxed text-[#8b8b96]">
+            <div className="a-input">
+              <AtSign className="size-4 shrink-0 text-white/55" aria-hidden />
+              <input
+                id="buy-username"
+                name="username"
+                type="text"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                required
+                autoFocus
+                minLength={3}
+                maxLength={32}
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                aria-invalid={invalid}
+                aria-describedby={error ? "buy-error" : "buy-username-hint"}
+                placeholder="mis. langitbiru"
+              />
+            </div>
+            <p id="buy-username-hint" className="mt-1.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-white/50">
               3–32 karakter · huruf, angka, titik, garis bawah, strip
             </p>
           </div>
 
-          <dl className="mt-6 divide-y divide-[#1c1c20] border-y border-[#1c1c20]">
+          <dl className="mt-5 divide-y divide-white/[0.06] rounded-lg border border-white/[0.08] px-4">
             <div className="flex items-baseline justify-between gap-4 py-3">
-              <dt className="text-[13px] text-[#a1a1aa]">{product.name}</dt>
-              <dd className="font-mono text-[13px] tabular-nums text-[#fafafa]">{rupiah(product.priceIdr)}</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4 py-3">
-              <dt className="text-[13px] text-[#a1a1aa]">Email pembeli</dt>
-              <dd className="max-w-[62%] truncate font-mono text-[12.5px] text-[#d4d4d8]" title={email}>
+              <dt className="text-[12.5px] text-white/55">Email penerima</dt>
+              <dd className="max-w-[62%] truncate font-mono text-[12px] text-white/85" title={email}>
                 {email}
               </dd>
             </div>
             <div className="flex items-baseline justify-between gap-4 py-3">
-              <dt className="text-[13px] text-[#a1a1aa]">Username pilihan</dt>
-              <dd className="font-mono text-[12.5px] text-[#d4d4d8]">{username.trim() || "—"}</dd>
+              <dt className="text-[12.5px] text-white/55">Username</dt>
+              <dd className="font-mono text-[12px] text-white/85">{username.trim() || "—"}</dd>
             </div>
             <div className="flex items-baseline justify-between gap-4 py-3">
-              <dt className="text-[13px] text-[#a1a1aa]">Pembayaran</dt>
-              <dd className="font-mono text-[12.5px] text-[#d4d4d8]">QRIS · sekali bayar</dd>
+              <dt className="text-[12.5px] text-white/55">Total sekali bayar</dt>
+              <dd className="font-mono text-[12.5px] tabular-nums text-white">{rupiah(product.priceIdr)}</dd>
             </div>
           </dl>
 
-          <div className="mt-5 flex items-center gap-3">
+          <div className="mt-5 flex items-stretch gap-2.5">
             <button
               type="button"
               onClick={() => {
@@ -259,51 +281,66 @@ export function PurchaseFlow({ product }: { product: Product }) {
                 setStep(1);
               }}
               disabled={pending}
-              className="flex h-12 items-center gap-2 border border-[#27272a] px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-[#a1a1aa] transition-colors hover:border-[#3a3a3f] hover:text-[#fafafa] disabled:opacity-50"
+              aria-label="Ubah email"
+              className="flex size-12 shrink-0 items-center justify-center rounded-md border border-white/10 text-white/55 transition-colors duration-150 hover:border-white/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-40"
             >
-              <ArrowLeft className="size-3.5" aria-hidden />
-              Ubah email
+              <ArrowLeft className="size-4" aria-hidden />
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="sh-submit flex h-12 flex-1 items-center justify-between gap-3 bg-[#fafafa] px-4 text-[12px] font-semibold uppercase tracking-[0.14em] text-[#09090b] transition-colors hover:bg-[#d4d4d8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa] focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090b] disabled:cursor-wait disabled:bg-[#18181b] disabled:text-[#8b8b96]"
+              className="a-submit flex h-12 flex-1 items-center justify-center gap-2 bg-[#fafafa] text-[13.5px] font-semibold tracking-[-0.01em] text-[#09090b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a] disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/55"
             >
-              <span className="flex items-center gap-2">
-                {pending ? "Menyiapkan QRIS" : "Continue to Payment"}
-                {pending ? <span className="sh-dots" aria-hidden /> : null}
-              </span>
-              <ArrowRight className="size-3.5" aria-hidden />
+              {pending ? (
+                <>
+                  <span className="a-spin" aria-hidden />
+                  Menyiapkan QRIS
+                </>
+              ) : (
+                <>
+                  Lanjut ke pembayaran
+                  <ArrowRight className="a-submit-arrow size-4" aria-hidden />
+                </>
+              )}
             </button>
           </div>
         </form>
       )}
 
-      <div aria-live="polite" className="min-h-[38px] pt-3">
+      <div aria-live="polite" className="mt-3 min-h-[38px]">
         {error ? (
-          <p id="buy-error" role="alert" className="sh-enter flex items-start gap-2 font-mono text-[11.5px] leading-relaxed text-[#e58f8f]">
-            <span className="select-none" aria-hidden>
+          <p id="buy-error" role="alert" className="flex items-start gap-2 text-[12px] leading-relaxed text-[#e58f8f]">
+            <span aria-hidden className="mt-px font-mono">
               !
             </span>
             <span>{error}</span>
           </p>
         ) : (
-          <p className="font-mono text-[11.5px] leading-relaxed text-[#8b8b96]">
+          <p className="flex items-center gap-2 font-mono text-[9.5px] uppercase leading-relaxed tracking-[0.16em] text-white/55">
+            <span aria-hidden className={`size-1.5 rounded-full ${pending ? "animate-pulse bg-white/70" : "bg-white/25"}`} />
             {notice || (pending ? "memeriksa data" : "data kamu hanya dipakai untuk membuat akun")}
           </p>
         )}
       </div>
 
-      <div className={`${row} mt-6`}>
-        <span className="pt-1" aria-hidden />
-        <span className="bg-[#1c1c20]" aria-hidden />
-        <div className="px-4">
-          <p className="font-mono text-[11px] leading-relaxed text-[#8b8b96]">
-            sudah punya akun?{" "}
-            <Link href="/login" className="text-[#fafafa] underline decoration-[#3a3a3f] underline-offset-4 hover:decoration-[#fafafa]">
-              login di sini
+      <div className="mt-6">
+        <span aria-hidden className="a-rule block" />
+        <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5">
+          <p className="text-[12px] leading-relaxed text-white/50">
+            Sudah punya akun?{" "}
+            <Link
+              href="/login"
+              className="font-medium text-white/80 underline decoration-white/20 underline-offset-4 transition-colors duration-150 hover:text-white hover:decoration-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a]"
+            >
+              Login di sini
             </Link>
           </p>
+          <Link
+            href="/login"
+            className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-white/50 transition-colors duration-150 hover:text-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a]"
+          >
+            batalkan
+          </Link>
         </div>
       </div>
     </div>

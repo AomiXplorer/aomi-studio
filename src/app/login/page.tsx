@@ -20,10 +20,22 @@ export const dynamic = "force-dynamic";
  * the only thing that asks for anything. Mono is kept as a whisper (labels,
  * captions, the clock) instead of doing the structural work it used to do.
  */
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string | string[] }> }) {
+/** One line, said plainly, for anyone the shop sent back here. */
+const RETURN_NOTES: Record<string, string> = {
+  cancelled: "Pembelian dibatalkan. Tidak ada biaya yang dikenakan.",
+  expired: "Waktu pembayaran habis. Silakan mulai lagi kalau masih mau akses.",
+  failed: "Pembayaran tidak berhasil. Coba lagi atau hubungi owner.",
+};
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[]; status?: string | string[] }>;
+}) {
   const params = await searchParams;
   const state = await loadAuthConfig();
   const next = typeof params.next === "string" ? params.next : undefined;
+  const note = typeof params.status === "string" ? RETURN_NOTES[params.status] || "" : "";
 
   // Straight from the registry, so the rail can never advertise a tool that does not exist.
   const tools = toolNames();
@@ -162,6 +174,22 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               >
                 Welcome back. Ready when you are.
               </p>
+
+              {note ? (
+                <p
+                  className="a-rise mt-4 flex items-start gap-2 rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-[12px] leading-relaxed text-white/60"
+                  style={{ "--i": 3 } as React.CSSProperties}
+                  role="status"
+                >
+                  <span aria-hidden className="mt-[6px] size-1.5 shrink-0 rounded-full bg-white/40" />
+                  <span>
+                    {note}{" "}
+                    <Link href="/buy" className="font-medium text-white/80 underline decoration-white/20 underline-offset-4 hover:text-white hover:decoration-white/60">
+                      Beli akses
+                    </Link>
+                  </span>
+                </p>
+              ) : null}
 
               <div className="a-rise mt-7" style={{ "--i": 3 } as React.CSSProperties}>
                 <LoginForm
