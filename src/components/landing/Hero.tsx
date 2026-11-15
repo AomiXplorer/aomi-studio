@@ -40,12 +40,12 @@ export function LandingHero({
       <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[53%] lg:block" aria-hidden>
         <div className="land-parallax absolute -inset-[6%]">
           <Image
-            src="/astra.webp"
+            src="/astra-hero.webp"
             alt=""
             fill
             priority
-            sizes="58vw"
-            className="a-hero-img origin-[45%_48%] scale-[1.34] bg-[#0b0b0e] object-cover object-[38%_44%] grayscale"
+            unoptimized
+            className="a-hero-img bg-[#0b0b0e] object-cover object-[46%_40%] grayscale"
           />
         </div>
         <span className="absolute inset-0 bg-[linear-gradient(to_right,#08080a_0%,rgba(8,8,10,0.96)_18%,rgba(8,8,10,0.62)_44%,rgba(8,8,10,0.15)_72%,rgba(8,8,10,0.3)_100%)]" />
@@ -60,12 +60,12 @@ export function LandingHero({
         >
           <div className="land-parallax absolute -inset-[8%]">
             <Image
-              src="/astra.webp"
+              src="/astra-hero.webp"
               alt=""
               fill
               priority
-              sizes="100vw"
-              className="a-hero-img origin-[46%_46%] scale-[1.18] bg-[#0b0b0e] object-cover object-[46%_40%] grayscale"
+              unoptimized
+              className="a-hero-img bg-[#0b0b0e] object-cover object-[48%_34%] grayscale"
             />
           </div>
           <span className="absolute inset-0 bg-[radial-gradient(120%_110%_at_64%_20%,transparent_30%,rgba(8,8,10,0.55)_100%)]" />

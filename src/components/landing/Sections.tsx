@@ -182,12 +182,12 @@ export function LandingClosing({ authed, priceLabel }: { authed: boolean; priceL
     <section className="relative isolate overflow-hidden" aria-labelledby="closing-title">
       <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[46%] md:block" aria-hidden>
         <Image
-          src="/astra.webp"
+          src="/astra-hero.webp"
           alt=""
           fill
           loading="lazy"
-          sizes="46vw"
-          className="land-cta-art object-cover object-[44%_40%] grayscale"
+          unoptimized
+          className="land-cta-art object-cover object-[46%_38%] grayscale"
         />
       </div>
       <span
