@@ -82,6 +82,7 @@ provider's own message instead of a placeholder result.
 src/
   app/
     page.tsx        public introduction (static, no session read)
+    globals.css     `.land-*` is the introduction's own layer: reveal, parallax, cards
     api/            route handlers (chat SSE, projects, files, assets, export, image, audio)
     chat/ projects/ studio/ settings/     pages (session required)
   components/
@@ -190,6 +191,12 @@ Tested on 2026-11-14 against the live provider and a local production build:
   width; all 17 scroll-reveal blocks resolve; the anchor from Explore Features lands
   82px clear of the sticky bar; with `prefers-reduced-motion: reduce` nothing is hidden
   and no parallax runs; every text node measured at 4.5:1 or better against `#08080a`.
+- Introduction refinement (2026-11-15): one headline ("Meet Aomi."), one grotesk for
+  headings and body with monospace left to the brand, no section numbering, no rules
+  between sections. No horizontal overflow at 320–1440, the hero button sits inside the
+  first screen at every phone width, 13/13 reveal blocks resolve, all text ≥4.5:1, and
+  the artwork ships as `astra-hero.webp` (tone-curved, vignetted, served unoptimised so
+  it keeps its resolution).
 - Routing (2026-11-15): `/`, `/login`, `/buy` answer 200 without a cookie, `/chat`,
   `/projects`, `/settings` and `/admin` answer 307 to `/login?next=…`, owner sign-in
   lands on `/chat`, a signed-in visit to `/login` goes to `/chat`, and the landing page
