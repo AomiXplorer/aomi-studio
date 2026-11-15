@@ -21,9 +21,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // The login screen is its own page: no sidebar, no mobile header.
+  // The gate and the shop are their own rooms: no sidebar, no mobile header.
   // Kept after every hook so the hook order never changes between renders.
-  if (pathname === "/login") return <>{children}</>;
+  if (pathname === "/login" || pathname.startsWith("/buy")) return <>{children}</>;
 
   return (
     <div className="flex min-h-dvh bg-bg">
