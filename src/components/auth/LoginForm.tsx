@@ -79,12 +79,18 @@ export function LoginForm({
       });
       const payload = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
       if (!response.ok) {
+        const said = payload?.error?.message || "";
+        // An unsolved challenge is not a wrong password: keep what was typed and just ask
+        // for the verification, so an early click never costs the owner their typing.
+        const challenge = response.status === 400 && /verification/i.test(said);
         setError(
-          response.status === 429
-            ? payload?.error?.message || "Too many attempts. Try again in a moment."
-            : payload?.error?.message || "Incorrect username or password.",
+          challenge
+            ? said
+            : response.status === 429
+              ? said || "Too many attempts. Try again in a moment."
+              : said || "Incorrect username or password.",
         );
-        setPassword("");
+        if (!challenge) setPassword("");
         setShake((value) => value + 1);
         setStage("idle");
         if (turnstileSiteKey) {
