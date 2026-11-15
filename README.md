@@ -192,11 +192,15 @@ Tested on 2026-11-14 against the live provider and a local production build:
   82px clear of the sticky bar; with `prefers-reduced-motion: reduce` nothing is hidden
   and no parallax runs; every text node measured at 4.5:1 or better against `#08080a`.
 - Introduction refinement (2026-11-15): one headline ("Meet Aomi."), one grotesk for
-  headings and body with monospace left to the brand, no section numbering, no rules
-  between sections. No horizontal overflow at 320–1440, the hero button sits inside the
-  first screen at every phone width, 13/13 reveal blocks resolve, all text ≥4.5:1, and
-  the artwork ships as `astra-hero.webp` (tone-curved, vignetted, served unoptimised so
-  it keeps its resolution).
+  headings and body with monospace left to the brand and the hero eyebrow, no section
+  numbering, no rules between sections. The type scale lives in `.land-room` as
+  `--land-fs-*` and runs 32→48 (headline), 26→30 / 24→28 / 24→27 (section titles),
+  28→32 (closing), 17 (card names), 15–16 (body), 12 (meta), so a section title cannot
+  drift. Every section after the hero is spaced by one rule only (its bottom padding).
+  No horizontal overflow at 320–1440, the hero button sits inside the first screen at
+  every phone width, 13/13 reveal blocks resolve, all text ≥4.5:1, and the artwork ships
+  as `astra-hero.webp` (tone-curved, vignetted, served unoptimised so it keeps its
+  resolution).
 - Routing (2026-11-15): `/`, `/login`, `/buy` answer 200 without a cookie, `/chat`,
   `/projects`, `/settings` and `/admin` answer 307 to `/login?next=…`, owner sign-in
   lands on `/chat`, a signed-in visit to `/login` goes to `/chat`, and the landing page

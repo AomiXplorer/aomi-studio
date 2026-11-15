@@ -1011,22 +1011,160 @@
   height: 1px;
   background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.12), transparent);
 }
-
 /* ── Introduction: the public front door ───────────────────────────────────
-   One grotesk, four lines of type, one artwork. Numbering, rules and monospace
-   lists are gone; the only mono left is the brand mark. Everything animates on
-   opacity and transform, is driven by one scroll listener, and dies under
-   prefers-reduced-motion. */
+   Set as a page, not a dashboard. One grotesk in a short scale, one artwork, one
+   white button. Type carries the hierarchy (32–48 headline, 22–30 section titles,
+   17 card names, 15 body), space separates the sections, and mono survives in two
+   places only, the brand mark and the hero eyebrow, as the terminal accent.
+
+   Sizes are declared once here and read by the components, so a section title can
+   never drift away from the scale by accident. */
 
 .land-room {
+  --land-ink: #f7f7f8;
+  --land-body: rgb(255 255 255 / 0.6);
+  --land-quiet: rgb(255 255 255 / 0.5);
+  --land-hair: rgb(255 255 255 / 0.07);
+  --land-surface: rgb(255 255 255 / 0.024);
+
+  --land-fs-display: clamp(2rem, 4.6vw, 3rem);          /* 32 → 48 */
+  --land-fs-title-xl: clamp(1.75rem, 2.8vw, 2rem);      /* 28 → 32 */
+  --land-fs-title: clamp(1.625rem, 2.6vw, 1.875rem);    /* 26 → 30 */
+  --land-fs-title-sm: clamp(1.5rem, 2.4vw, 1.75rem);    /* 24 → 28 */
+  --land-fs-title-xs: clamp(1.5rem, 2.2vw, 1.6875rem);  /* 24 → 27 */
+  --land-fs-lead: clamp(1.0625rem, 1.3vw, 1.1875rem);   /* 17 → 19 */
+  --land-fs-card: 1.0625rem;                            /* 17 */
+  --land-fs-body: 0.9375rem;                            /* 15 */
+  --land-fs-body-lg: 1rem;                              /* 16 */
+  --land-fs-small: 0.875rem;                            /* 14 */
+  --land-fs-meta: 0.75rem;                              /* 12 */
+  --land-fs-nano: 0.6875rem;                            /* 11 */
+
   background-color: #08080a;
-  color: #fafafa;
+  color: var(--land-ink);
   font-family: var(--font-grotesk), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* The scale. One class per step, so nothing invents a size of its own. */
+.land-display {
+  font-size: var(--land-fs-display);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+}
+
+.land-title-xl,
+.land-title,
+.land-title-sm,
+.land-title-xs {
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.land-title-xl {
+  font-size: var(--land-fs-title-xl);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.land-title {
+  font-size: var(--land-fs-title);
+  line-height: 1.12;
+  letter-spacing: -0.028em;
+}
+
+.land-title-sm {
+  font-size: var(--land-fs-title-sm);
+  line-height: 1.14;
+  letter-spacing: -0.026em;
+}
+
+.land-title-xs {
+  font-size: var(--land-fs-title-xs);
+  line-height: 1.16;
+  letter-spacing: -0.022em;
+}
+
+.land-lead {
+  font-size: var(--land-fs-lead);
+  line-height: 1.4;
+  letter-spacing: -0.015em;
+  font-weight: 500;
+}
+
+.land-card-title {
+  font-size: var(--land-fs-card);
+  line-height: 1.35;
+  letter-spacing: -0.012em;
+  font-weight: 600;
+}
+
+.land-body,
+.land-body-lg,
+.land-small,
+.land-meta {
+  text-wrap: pretty;
+}
+
+.land-body {
+  font-size: var(--land-fs-body);
+  line-height: 1.68;
+  color: var(--land-body);
+}
+
+.land-body-lg {
+  font-size: var(--land-fs-body-lg);
+  line-height: 1.65;
+  color: rgb(255 255 255 / 0.72);
+}
+
+.land-small {
+  font-size: var(--land-fs-small);
+  line-height: 1.6;
+  color: var(--land-quiet);
+}
+
+.land-meta {
+  font-size: var(--land-fs-meta);
+  line-height: 1.5;
+  color: rgb(255 255 255 / 0.5);
+}
+
+/* The one mono line on the page besides the brand. */
+.land-eyebrow {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--land-fs-nano);
+  line-height: 1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.48);
+}
+
+/* One still pool of light in the upper left, behind the words. The artwork carries
+   the light on the right; this only keeps the type off a flat black field. */
+.land-light {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.land-light::before {
+  content: "";
+  position: absolute;
+  top: -34%;
+  left: -6%;
+  width: min(760px, 108%);
+  aspect-ratio: 2 / 1;
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.045), transparent 72%);
 }
 
 /* Anchor jumps clear the sticky bar instead of hiding the heading under it. */
 .land-anchor {
-  scroll-margin-top: 88px;
+  scroll-margin-top: 76px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1039,39 +1177,38 @@
    once the observer is armed, so a blocked script can never leave a blank page. */
 .land-reveal {
   transition:
-    opacity 620ms cubic-bezier(0.16, 1, 0.3, 1) var(--land-delay, 0ms),
-    transform 620ms cubic-bezier(0.16, 1, 0.3, 1) var(--land-delay, 0ms);
+    opacity 520ms cubic-bezier(0.22, 1, 0.36, 1) var(--land-delay, 0ms),
+    transform 520ms cubic-bezier(0.22, 1, 0.36, 1) var(--land-delay, 0ms);
 }
 
 .land-room[data-land-reveal="on"] .land-reveal:not([data-seen="true"]) {
   opacity: 0;
-  transform: translate3d(0, 12px, 0);
+  transform: translate3d(0, 10px, 0);
 }
 
-/* The hero art drifts a few pixels as the page scrolls: one variable, set by
-   the single scroll listener, read by both the desktop and mobile layers. */
+/* The hero art drifts a few pixels as the page scrolls: one variable, set by the
+   single scroll listener, read by both the desktop and mobile layers. */
 .land-parallax {
-  transform: translate3d(0, calc(var(--land-shift, 0px) * 1), 0) scale(1.03);
+  transform: translate3d(0, calc(var(--land-shift, 0px) * 1), 0) scale(1.02);
   will-change: transform;
 }
 
-/* ── Primary action ────────────────────────────────────────────────────────
-   The one white object on the page. Its light is a soft drop, not a glow, and
-   the only motion is the arrow stepping to the right. */
+/* ── The one white object ──────────────────────────────────────────────────
+   Feedback is a 1px lift and a slightly denser white; no glow, no scale. */
 .land-cta {
-  background-color: #fafafa;
+  background-color: #f7f7f8;
   color: #09090b;
-  box-shadow: 0 14px 34px -18px rgb(255 255 255 / 0.55);
   transition:
-    background-color 160ms ease,
-    box-shadow 200ms ease,
-    transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+    background-color 140ms ease,
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms ease;
+  box-shadow: 0 1px 0 0 rgb(255 255 255 / 0.2) inset;
 }
 
 .land-cta:hover {
   background-color: #ffffff;
-  box-shadow: 0 18px 40px -16px rgb(255 255 255 / 0.5);
   transform: translate3d(0, -1px, 0);
+  box-shadow: 0 8px 20px -14px rgb(255 255 255 / 0.6);
 }
 
 .land-cta:active {
@@ -1079,50 +1216,33 @@
 }
 
 /* ── Cards ─────────────────────────────────────────────────────────────────
-   A quiet surface: one soft fill, one hairline, no inner rules. Hover lifts the
-   card two pixels and warms the surface and the icon, nothing else. */
+   One surface, one hairline, no inner rules and no icon frame: the icon is just
+   a mark. Hover warms the border and lifts the card a single pixel. */
 .land-card {
-  border: 1px solid rgb(255 255 255 / 0.07);
-  background-color: rgb(255 255 255 / 0.022);
+  border: 1px solid var(--land-hair);
+  background-color: var(--land-surface);
   transition:
-    border-color 220ms ease,
-    background-color 220ms ease,
-    transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .land-card:hover {
-  border-color: rgb(255 255 255 / 0.14);
-  background-color: rgb(255 255 255 / 0.042);
-  transform: translate3d(0, -2px, 0);
+  border-color: rgb(255 255 255 / 0.13);
+  background-color: rgb(255 255 255 / 0.038);
+  transform: translate3d(0, -1px, 0);
 }
 
-/* The wide card carries the product: a little more light, a little more air. */
-.land-card-lead {
-  background-image: radial-gradient(120% 130% at 8% 0%, rgb(255 255 255 / 0.055), transparent 62%);
+.land-card-mark {
+  color: rgb(255 255 255 / 0.5);
+  transition: color 180ms ease;
 }
 
-.land-card-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  border: 1px solid rgb(255 255 255 / 0.08);
-  background-color: rgb(255 255 255 / 0.04);
-  color: rgb(255 255 255 / 0.62);
-  transition:
-    color 220ms ease,
-    border-color 220ms ease,
-    background-color 220ms ease;
+.land-card:hover .land-card-mark {
+  color: rgb(255 255 255 / 0.9);
 }
 
-.land-card:hover .land-card-icon {
-  border-color: rgb(255 255 255 / 0.18);
-  background-color: rgb(255 255 255 / 0.08);
-  color: rgb(255 255 255 / 0.95);
-}
-
-/* Text links: the underline sits a third of a pixel thin and warms on hover. */
+/* Text links: a hairline under the words, warming on hover. */
 .land-link-line {
   position: relative;
 }
@@ -1135,20 +1255,20 @@
   bottom: -3px;
   height: 1px;
   background: currentColor;
-  opacity: 0.3;
-  transition: opacity 260ms ease;
+  opacity: 0.28;
+  transition: opacity 220ms ease;
 }
 
 .land-link:hover .land-link-line::after,
 .land-link:focus-visible .land-link-line::after {
-  opacity: 0.85;
+  opacity: 0.8;
 }
 
 /* The art in the closing band never competes with the sentence over it. */
 .land-cta-art {
-  mask-image: linear-gradient(to right, transparent, #000 30%, #000 72%, transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 30%, #000 72%, transparent);
-  opacity: 0.42;
+  mask-image: linear-gradient(to right, transparent, #000 32%, #000 74%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 32%, #000 74%, transparent);
+  opacity: 0.38;
 }
 
 @media (prefers-reduced-motion: reduce) {

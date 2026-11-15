@@ -88,8 +88,8 @@ export function Landing({ tools, priceLabel }: { tools: string[]; priceLabel: st
 
   return (
     <div id="top" ref={room} className="a-room land-room relative min-h-dvh overflow-x-clip">
-      {/* Light only: the printed grid texture that suits the gate reads as a HUD here. */}
-      <div className="a-glow" aria-hidden />
+      {/* One static pool of light. No grid, no breathing loop. */}
+      <div className="land-light" aria-hidden />
 
       <a
         href="#content"
@@ -99,27 +99,27 @@ export function Landing({ tools, priceLabel }: { tools: string[]; priceLabel: st
       </a>
 
       {/* Nav: brand and a door. No clock, no status lamp, no second navigation. */}
-      <header className="sticky top-0 z-40 bg-[#08080a]/75 backdrop-blur-xl">
-        <div className="mx-auto flex h-[60px] w-full max-w-[1240px] items-center justify-between gap-3 px-5 sm:h-[68px] sm:px-8 lg:px-10">
+      <header className="sticky top-0 z-40 bg-[#08080a]/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-[56px] w-full max-w-[1120px] items-center justify-between gap-3 px-5 sm:h-[64px] sm:px-6 lg:px-8">
           <Link
             href="/"
             className="group flex items-center gap-2.5 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
           >
             <span
               aria-hidden
-              className="grid size-[26px] place-items-center rounded-[7px] border border-white/15 bg-white/[0.04] text-[12.5px] font-semibold leading-none text-white/90 transition-colors duration-200 group-hover:border-white/30 group-hover:text-white"
+              className="grid size-[24px] place-items-center rounded-md border border-white/12 bg-white/[0.04] text-[12px] font-semibold leading-none text-white/85 transition-colors duration-150 group-hover:border-white/25 group-hover:text-white"
             >
               a
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/70 transition-colors duration-200 group-hover:text-white">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/65 transition-colors duration-150 group-hover:text-white">
               aomi studio
             </span>
           </Link>
 
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-4 sm:gap-5">
             <Link
               href={authed ? "/chat" : "/login"}
-              className="text-[13.5px] font-medium text-white/60 transition-colors duration-150 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/70"
+              className="text-[13px] font-medium text-white/60 transition-colors duration-150 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/70"
             >
               {authed ? "Workspace" : "Sign in"}
             </Link>
@@ -127,7 +127,7 @@ export function Landing({ tools, priceLabel }: { tools: string[]; priceLabel: st
             {authed ? null : (
               <Link
                 href="/buy"
-                className="rounded-lg border border-white/15 px-4 py-2.5 text-[13.5px] font-medium text-white/90 transition-colors duration-200 hover:border-white/35 hover:bg-white/[0.06] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+                className="inline-flex h-9 items-center rounded-md border border-white/12 px-3.5 text-[12.5px] font-medium text-white/85 transition-colors duration-150 hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
               >
                 Get access
               </Link>
@@ -137,7 +137,7 @@ export function Landing({ tools, priceLabel }: { tools: string[]; priceLabel: st
       </header>
 
       <main id="content" lang="en">
-        <LandingHero authed={authed} tools={tools.length} priceLabel={priceLabel} />
+        <LandingHero authed={authed} priceLabel={priceLabel} />
         <LandingAbout />
         <LandingFeatures tools={tools} />
         <LandingProcess />
