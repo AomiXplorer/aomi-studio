@@ -221,7 +221,7 @@ export function LoginForm({
       <button
         type="submit"
         data-busy={pending}
-        disabled={pending || granted || !username.trim() || !password || (Boolean(turnstileSiteKey) && !captchaToken)}
+        disabled={pending || granted || !username.trim() || !password}
         className="a-submit mt-5 flex h-12 w-full items-center justify-center gap-2 bg-[#fafafa] text-[13.5px] font-semibold tracking-[-0.01em] text-[#09090b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a] disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/55"
       >
         {granted ? (

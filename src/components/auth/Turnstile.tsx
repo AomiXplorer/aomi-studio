@@ -15,6 +15,7 @@ type TurnstileApi = {
       "error-callback"?: () => void;
     },
   ) => string;
+  reset: (widgetId: string) => void;
   remove: (widgetId: string) => void;
 };
 
@@ -29,10 +30,10 @@ const SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render
 /**
  * The Cloudflare challenge, kept to one small box under the fields.
  *
- * Tokens are single use, so `round` is the way a caller asks for a fresh challenge: after
- * a wrong password the widget is torn down and rendered again, instead of submitting a
- * token Cloudflare has already spent. With no site key the component renders nothing and
- * the form behaves exactly as it did before the challenge existed.
+ * Tokens are single use, so `round` is how a caller asks for a fresh one: the widget is
+ * reset in place rather than torn down and rebuilt, because rebuilding throws away the
+ * solved challenge and leaves the form waiting for a token that never arrives. With no
+ * site key the component renders nothing and the form behaves as it did before.
  */
 export function Turnstile({
   siteKey,
@@ -46,7 +47,9 @@ export function Turnstile({
   const host = useRef<HTMLDivElement>(null);
   const widget = useRef<string | null>(null);
   const deliver = useRef(onToken);
+  const roundSeen = useRef(round);
   const [state, setState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const [verified, setVerified] = useState(false);
 
   useEffect(() => {
     deliver.current = onToken;
@@ -54,22 +57,22 @@ export function Turnstile({
 
   const mount = useCallback(() => {
     if (!host.current || !window.turnstile) return;
-    if (widget.current) {
-      try {
-        window.turnstile.remove(widget.current);
-      } catch {
-        /* the widget is already gone */
-      }
-      widget.current = null;
-    }
+    if (widget.current) return;
     widget.current = window.turnstile.render(host.current, {
       sitekey: siteKey,
       theme: "dark",
       size: "flexible",
       appearance: "always",
-      callback: (token: string) => deliver.current(token),
-      "expired-callback": () => deliver.current(null),
+      callback: (token: string) => {
+        setVerified(true);
+        deliver.current(token);
+      },
+      "expired-callback": () => {
+        setVerified(false);
+        deliver.current(null);
+      },
       "error-callback": () => {
+        setVerified(false);
         setState("failed");
         deliver.current(null);
       },
@@ -77,52 +80,48 @@ export function Turnstile({
     setState("ready");
   }, [siteKey]);
 
+  // Load the API once and render a single widget. Round changes below never rebuild it.
   useEffect(() => {
     if (!siteKey) return;
     setState("loading");
     if (window.turnstile) {
       mount();
-      return () => {
-        if (widget.current && window.turnstile) {
-          try {
-            window.turnstile.remove(widget.current);
-          } catch {
-            /* already removed */
-          }
-          widget.current = null;
-        }
-      };
+      return;
     }
 
-    const script = document.querySelector<HTMLScriptElement>("script[data-turnstile]");
+    const created = document.createElement("script");
+    created.src = SCRIPT_SRC;
+    created.async = true;
+    created.defer = true;
+    created.dataset.turnstile = "1";
     const onLoad = () => mount();
     const onError = () => setState("failed");
-    if (script) {
-      script.addEventListener("load", onLoad, { once: true });
-      script.addEventListener("error", onError, { once: true });
-    } else {
-      const created = document.createElement("script");
-      created.src = SCRIPT_SRC;
-      created.async = true;
-      created.defer = true;
-      created.dataset.turnstile = "1";
-      created.addEventListener("load", onLoad, { once: true });
-      created.addEventListener("error", onError, { once: true });
-      document.head.appendChild(created);
-    }
+    created.addEventListener("load", onLoad, { once: true });
+    created.addEventListener("error", onError, { once: true });
+    document.head.appendChild(created);
+
     return () => {
-      script?.removeEventListener("load", onLoad);
-      script?.removeEventListener("error", onError);
-      if (widget.current && window.turnstile) {
-        try {
-          window.turnstile.remove(widget.current);
-        } catch {
-          /* already removed */
-        }
-        widget.current = null;
-      }
+      created.removeEventListener("load", onLoad);
+      created.removeEventListener("error", onError);
     };
-  }, [mount, round, siteKey]);
+  }, [mount, siteKey]);
+
+  // A spent token cannot be reused, so ask the same widget for a new one.
+  useEffect(() => {
+    if (roundSeen.current === round) return;
+    roundSeen.current = round;
+    setVerified(false);
+    deliver.current(null);
+    const id = widget.current;
+    if (!id || !window.turnstile) return;
+    try {
+      window.turnstile.reset(id);
+    } catch {
+      /* the widget is gone; bring it back */
+      widget.current = null;
+      mount();
+    }
+  }, [mount, round]);
 
   if (!siteKey) return null;
 
@@ -135,7 +134,7 @@ export function Turnstile({
         </p>
       ) : (
         <p className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.18em] text-white/40">
-          {state === "ready" ? "diverifikasi cloudflare turnstile" : "memuat verifikasi"}
+          {verified ? "diverifikasi cloudflare turnstile" : "memuat verifikasi"}
         </p>
       )}
     </div>
