@@ -27,7 +27,10 @@ export function ModelPicker({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const chipRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const [anchor, setAnchor] = useState<{ left: number; top: number; width: number; maxHeight: number } | null>(null);
   const listId = useId();
 
   const current = models.find((item) => item.id === value);
@@ -71,7 +74,10 @@ export function ModelPicker({
     const isDesktop = window.matchMedia("(min-width: 640px)").matches;
     if (isDesktop) searchRef.current?.focus();
     const onPointerDown = (event: PointerEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (wrapRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -91,6 +97,36 @@ export function ModelPicker({
       ?.scrollIntoView({ block: "nearest" });
   }, [open, active, listId]);
 
+  // The chip lives in a 32px toolbar with `overflow: hidden`, so a panel absolutely
+  // positioned above it was clipped to nothing: invisible, unclickable, unscrollable.
+  // On desktop the panel is portalled to <body> and anchored to the chip instead.
+  useEffect(() => {
+    if (!open || sheet) return;
+    const place = () => {
+      const chip = chipRef.current?.getBoundingClientRect();
+      if (!chip) return;
+      const width = Math.min(320, window.innerWidth - 16);
+      const left = Math.max(8, Math.min(chip.right - width, window.innerWidth - width - 8));
+      const above = chip.top - 16;
+      const below = window.innerHeight - chip.bottom - 16;
+      const openAbove = above >= 220 || above >= below;
+      const maxHeight = Math.min(320, Math.max(160, openAbove ? above : below));
+      const top = openAbove ? Math.max(8, chip.top - 8 - maxHeight) : chip.bottom + 8;
+      setAnchor((prev) =>
+        prev && prev.left === left && prev.top === top && prev.width === width && prev.maxHeight === maxHeight
+          ? prev
+          : { left, top, width, maxHeight },
+      );
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place);
+    };
+  }, [open, sheet]);
+
   const choose = (id: string) => {
     onChange(id);
     setOpen(false);
@@ -99,6 +135,7 @@ export function ModelPicker({
   return (
     <div className="relative" ref={wrapRef}>
       <button
+        ref={chipRef}
         type="button"
         onClick={() => setOpen((next) => !next)}
         disabled={disabled || models.length === 0}
@@ -134,32 +171,41 @@ export function ModelPicker({
                 className="absolute inset-0 bg-[rgb(9_9_11/0.62)] backdrop-blur-[2px]"
               />
               <div
+                ref={panelRef}
                 role="dialog"
                 aria-label="Pilih model"
                 className="relative flex max-h-[74svh] flex-col overflow-hidden rounded-t-[18px] border border-line bg-panel pb-[max(0.35rem,env(safe-area-inset-bottom))] shadow-[0_24px_60px_-20px_rgb(0_0_0/0.7)]"
               >
-                <PanelBody />
+                {renderBody()}
               </div>
             </div>,
             document.body,
           )
         : null}
 
-      {open && !sheet ? (
-        <div
-          className={cn(
-            "absolute bottom-full right-0 z-50 mb-2 flex max-h-80 w-[320px] flex-col overflow-hidden rounded-xl border border-line bg-panel shadow-[0_24px_60px_-30px_rgb(9_9_11/0.45)]",
-          )}
-          role="dialog"
-          aria-label="Pilih model"
-        >
-          <PanelBody />
-        </div>
-      ) : null}
+      {open && !sheet && anchor && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-label="Pilih model"
+              style={{
+                left: anchor.left,
+                top: anchor.top,
+                width: anchor.width,
+                maxHeight: anchor.maxHeight,
+              }}
+              className="fixed z-[80] flex flex-col overflow-hidden rounded-xl border border-line bg-panel shadow-[0_24px_60px_-30px_rgb(9_9_11/0.45)]"
+            >
+              {renderBody()}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 
-  function PanelBody() {
+  function renderBody() {
     return (
       <>
         <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2.5">
