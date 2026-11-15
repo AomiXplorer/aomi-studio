@@ -1011,3 +1011,169 @@
   height: 1px;
   background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.12), transparent);
 }
+
+/* ── Introduction: the public front door ───────────────────────────────────
+   Same room as the gate, but read like a printed spread: an asymmetric hero
+   with Astra bleeding off the right edge, hairline rules instead of boxes, and
+   mono kept to the margins. Everything animates on opacity and transform, is
+   driven by one scroll listener, and dies under prefers-reduced-motion. */
+
+.land-room {
+  background-color: #08080a;
+  color: #fafafa;
+}
+
+/* Anchor jumps clear the sticky bar instead of hiding the heading under it. */
+.land-anchor {
+  scroll-margin-top: 82px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Reveal on scroll. The page is visible by default; the room only hides these
+   once the observer is armed, so a blocked script can never leave a blank page. */
+.land-reveal {
+  transition:
+    opacity 640ms cubic-bezier(0.16, 1, 0.3, 1) var(--land-delay, 0ms),
+    transform 640ms cubic-bezier(0.16, 1, 0.3, 1) var(--land-delay, 0ms);
+}
+
+.land-room[data-land-reveal="on"] .land-reveal:not([data-seen="true"]) {
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+}
+
+/* The hero art drifts a few pixels as the page scrolls: one variable, set by
+   the single scroll listener, read by both the desktop and mobile layers. */
+.land-parallax {
+  transform: translate3d(0, calc(var(--land-shift, 0px) * 1), 0) scale(1.04);
+  will-change: transform;
+}
+
+/* A card that is a sheet of glass, not a floating chip: the top hairline is the
+   only thing that lights up on hover, which keeps the grid calm when scanned. */
+.land-card {
+  position: relative;
+  isolation: isolate;
+  transition:
+    border-color 220ms ease,
+    background-color 220ms ease;
+}
+
+.land-card::after {
+  content: "";
+  position: absolute;
+  inset-inline: 14px;
+  top: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+.land-card:hover::after,
+.land-card:focus-within::after {
+  opacity: 1;
+}
+
+.land-index {
+  transition: color 220ms ease;
+}
+
+.land-card:hover .land-index {
+  color: rgb(255 255 255 / 0.5);
+}
+
+/* Process rows: the rule under a row inks in from the left on hover. */
+.land-step {
+  position: relative;
+}
+
+.land-step::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.4), transparent 70%);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.land-step:hover::after {
+  transform: scaleX(1);
+}
+
+/* Three dots that keep working, used by step two. */
+.land-dot {
+  animation: land-dot 1.6s ease-in-out infinite;
+}
+
+.land-dot:nth-child(2) {
+  animation-delay: 200ms;
+}
+
+.land-dot:nth-child(3) {
+  animation-delay: 400ms;
+}
+
+@keyframes land-dot {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+/* The Explore Features link: one line that draws itself instead of a button. */
+.land-link-line {
+  position: relative;
+}
+
+.land-link-line::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.35;
+  transform: scaleX(1);
+  transform-origin: right center;
+  transition:
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 260ms ease;
+}
+
+.land-link-line:hover::after,
+.land-link-line:focus-visible::after {
+  opacity: 0.9;
+}
+
+.land-link-arrow {
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.land-link:hover .land-link-arrow {
+  transform: translate3d(0, 2px, 0);
+}
+
+/* The art in the closing band never competes with the sentence over it. */
+.land-cta-art {
+  mask-image: linear-gradient(to right, transparent, #000 34%, #000 76%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 34%, #000 76%, transparent);
+  opacity: 0.5;
+}
+
+.land-hairline {
+  height: 1px;
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0.04));
+}

@@ -8,6 +8,9 @@ Built with TypeScript, Next.js App Router, React, Tailwind CSS and Lucide icons.
 
 ## What it does
 
+- **A public introduction, then a gate.** `/` is a landing page anyone can read; the
+  workspace behind it still requires a signed session. Signed-in visitors are taken
+  straight to `/chat` instead of being asked again.
 - **Chat with an agent, not a chatbot.** Every turn can call tools that create, read,
   edit, rename and delete files in the current project workspace.
 - **Code workspace.** File explorer, multi-tab editor (CodeMirror 6), per-file diff of
@@ -78,8 +81,9 @@ provider's own message instead of a placeholder result.
 ```
 src/
   app/
+    page.tsx        public introduction (static, no session read)
     api/            route handlers (chat SSE, projects, files, assets, export, image, audio)
-    chat/ projects/ studio/ settings/     pages
+    chat/ projects/ studio/ settings/     pages (session required)
   components/
     chat/           conversation, markdown, tool timeline, status rail, composer
     workspace/      file tree, editor, diff, workspace shell
@@ -92,6 +96,20 @@ src/
     workspace/      storage drivers, path guards, projects service, templates
     services/       export (ZIP), analysis, dependency resolution, rate limit
 ```
+
+### Routes and who may open them
+
+| Route | Access | Notes |
+| --- | --- | --- |
+| `/` | public | Introduction. Static shell; the only per-visitor detail (a way back inside) is decided in the browser. |
+| `/login` | public | The gate. A valid session here redirects to `/chat`. |
+| `/buy`, `/buy/pay`, `/buy/success` | public | Checkout is protected by a per-order token, not by the session. |
+| `/chat`, `/projects`, `/projects/[id]`, `/studio/*`, `/settings` | session | Redirect to `/login?next=…` without a cookie. |
+| `/admin` | admin | 403 for a plain user, redirect for a visitor. |
+| `/api/*` | session | Machine routes (`/webhook/austinpay`, `/api/telegram/webhook`, `/api/cron/backup`, `/api/ops/provider`) verify their own caller. |
+
+`src/proxy.ts` enforces this before any handler runs; `lib/auth/headers.ts` holds the
+public path list.
 
 The provider sits behind one adapter (`lib/ai/bangunweb.ts`) that normalises model
 metadata, streaming events, tool calls and errors. Adding another provider means

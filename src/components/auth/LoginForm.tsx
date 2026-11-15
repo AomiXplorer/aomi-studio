@@ -17,7 +17,8 @@ import {
 
 /** Only ever redirects inside this site: `//evil.com` and absolute URLs are refused. */
 function safeNext(raw: string | undefined): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) return "/";
+  // "/" is the public introduction now, so a plain sign-in lands in the workspace.
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) return "/chat";
   return raw;
 }
 

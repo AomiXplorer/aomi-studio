@@ -65,6 +65,9 @@ export function withSecurityHeaders(response: Response, nonce?: string): Respons
 export const PUBLIC_FILES = ["/og-banner.jpg", "/astra.webp"] as const;
 
 export const PUBLIC_PATHS = [
+  // The introduction is the front door: a visitor has to be able to read what Aomi
+  // is before being asked for a password. Everything past it still needs a session.
+  "/",
   "/login",
   // The shop front is reachable before someone has an account: that is the whole point of
   // it. Payment state is still protected by a per-order token, never by the session.

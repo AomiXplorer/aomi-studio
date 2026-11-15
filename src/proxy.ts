@@ -55,9 +55,11 @@ export default async function proxy(request: NextRequest) {
     return withSecurityHeaders(NextResponse.redirect(url), nonce);
   }
 
+  // Already signed in: the gate has nothing to ask, so go straight inside. The
+  // introduction stays readable at "/" for anyone who lands on it.
   if (claims && pathname === "/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/chat";
     url.search = "";
     return withSecurityHeaders(NextResponse.redirect(url), nonce);
   }
